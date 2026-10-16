@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>QuizLive — Trắc nghiệm trực tiếp</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1221;
+  --bg2: #161b2e;
+  --card: #1c2238;
+  --card2: #242b45;
+  --border: #2e3658;
+  --ink: #eef1ff;
+  --muted: #8b95b8;
+  --primary: #5b7cfa;
+  --primary2: #3d5ce5;
+  --green: #22c55e;
+  --green2: #16a34a;
+  --orange: #f59e0b;
+  --red: #ef4444;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --gold: #fbbf24;
+  --radius: 18px;
+  --shadow: 0 12px 40px rgba(0,0,0,.45);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(91,124,250,.25), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(167,139,250,.18), transparent),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(34,197,94,.08), transparent);
+}
+
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+
+.wrap { max-width: 920px; margin: 0 auto; padding: 16px 14px 48px; }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 4px 16px; gap: 10px;
+}
+.toolbar .brand { font-weight: 800; font-size: 1.05rem; letter-spacing: -.02em; }
+.toolbar .brand span { color: var(--primary); }
+.toolbar .actions { display: flex; gap: 8px; }
+.toolbtn {
+  background: var(--card2); border: 1px solid var(--border); color: var(--ink);
+  border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: .9rem;
+  cursor: pointer; font-family: inherit; transition: .15s;
+}
+.toolbtn:hover { background: var(--border); }
+.toolbtn:active { transform: scale(.96); }
+
+/* ===== Card ===== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 22px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: fadeUp .35s ease;
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+h1 { font-size: 2rem; font-weight: 900; letter-spacing: -.03em; margin-bottom: .3em; }
+h2 { font-size: 1.45rem; font-weight: 800; margin-bottom: .4em; }
+h3 { font-size: 1.15rem; font-weight: 700; margin: 1em 0 .5em; }
+.sub { color: var(--muted); margin-bottom: 1.2em; font-size: 1rem; }
+.note { color: var(--muted); font-size: .9rem; }
+.muted { color: var(--muted); }
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: none; cursor: pointer; font-weight: 700; color: #fff;
+  background: linear-gradient(180deg, var(--primary), var(--primary2));
+  padding: 14px 24px; font-size: 1.05rem; border-radius: 14px;
+  font-family: inherit; box-shadow: 0 4px 0 #2a3fad, 0 6px 16px rgba(91,124,250,.3);
+  transition: transform .08s, box-shadow .08s; margin: 6px 4px;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #2a3fad; }
+.btn:disabled { opacity: .45; cursor: default; transform: none; }
+.btn.green { background: linear-gradient(180deg, #34d399, var(--green2)); box-shadow: 0 4px 0 #0f7a35, 0 6px 16px rgba(34,197,94,.25); }
+.btn.green:active { box-shadow: 0 1px 0 #0f7a35; }
+.btn.orange { background: linear-gradient(180deg, #fbbf24, #d97706); box-shadow: 0 4px 0 #92400e, 0 6px 16px rgba(245,158,11,.25); }
+.btn.orange:active { box-shadow: 0 1px 0 #92400e; }
+.btn.red { background: linear-gradient(180deg, #f87171, #dc2626); box-shadow: 0 4px 0 #991b1b, 0 6px 16px rgba(239,68,68,.25); }
+.btn.red:active { box-shadow: 0 1px 0 #991b1b; }
+.btn.purple { background: linear-gradient(180deg, #c4b5fd, #7c3aed); box-shadow: 0 4px 0 #5b21b6, 0 6px 16px rgba(167,139,250,.25); }
+.btn.purple:active { box-shadow: 0 1px 0 #5b21b6; }
+.btn.ghost {
+  background: transparent; border: 2px solid var(--border); color: var(--ink);
+  box-shadow: none;
+}
+.btn.ghost:active { background: var(--card2); box-shadow: none; }
+.btn.big { font-size: 1.25rem; padding: 18px 32px; border-radius: 16px; }
+.btn.small { font-size: .9rem; padding: 9px 16px; border-radius: 12px; box-shadow: 0 2px 0 transparent; }
+.btn.block { width: 100%; max-width: 360px; }
+
+/* ===== Inputs ===== */
+input[type=text], input[type=password], textarea, select {
+  font-size: 1.05rem; padding: 13px 16px; border-radius: 12px;
+  border: 2px solid var(--border); background: var(--bg2); color: var(--ink);
+  width: 100%; max-width: 400px; outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+textarea { min-height: 100px; resize: vertical; }
+::placeholder { color: var(--muted); }
+
+/* ===== Home ===== */
+.home-hero { margin-bottom: 28px; }
+.home-hero .logo {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; margin: 0 auto 16px;
+  box-shadow: 0 8px 32px rgba(91,124,250,.4);
+}
+.role-grid { display: grid; gap: 14px; max-width: 420px; margin: 0 auto; }
+.role-card {
+  background: var(--card2); border: 2px solid var(--border); border-radius: 16px;
+  padding: 20px; cursor: pointer; text-align: left; transition: .2s;
+  display: flex; align-items: center; gap: 16px;
+}
+.role-card:hover { border-color: var(--primary); background: #252d4a; }
+.role-card:active { transform: scale(.98); }
+.role-card .icon {
+  width: 52px; height: 52px; border-radius: 14px; display: flex;
+  align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0;
+}
+.role-card.teacher .icon { background: linear-gradient(135deg, #34d399, #059669); }
+.role-card.student .icon { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.role-card h3 { margin: 0 0 2px; font-size: 1.1rem; }
+.role-card p { margin: 0; color: var(--muted); font-size: .9rem; }
+
+.footer {
+  margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: .9rem; color: var(--muted); line-height: 1.7;
+}
+.footer a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* ===== Tabs ===== */
+.tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+.tab {
+  padding: 10px 18px; border-radius: 999px; border: 2px solid var(--border);
+  background: var(--card2); font-weight: 700; cursor: pointer; font-family: inherit;
+  color: var(--muted); font-size: .95rem; transition: .15s;
+}
+.tab.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tab:hover:not(.on) { border-color: var(--primary); color: var(--ink); }
+
+/* ===== PIN ===== */
+.pin {
+  font-size: 3.8rem; font-weight: 900; letter-spacing: .28em; color: var(--primary);
+  margin: .15em 0; text-indent: .28em;
+  text-shadow: 0 0 40px rgba(91,124,250,.5);
+}
+.pin-box {
+  background: var(--bg2); border: 2px dashed var(--border); border-radius: 16px;
+  padding: 12px 8px; margin: 12px 0 18px;
+}
+
+/* ===== Players ===== */
+.plist { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
+.pname {
+  background: var(--card2); border: 1px solid var(--border); padding: 7px 14px;
+  border-radius: 999px; font-weight: 600; font-size: .95rem;
+}
+
+/* ===== Question ===== */
+.qtext { font-size: 1.45rem; font-weight: 800; margin: 12px 0 18px; line-height: 1.35; }
+.qimg { max-width: 100%; max-height: 260px; border-radius: 14px; margin: 8px 0 12px; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.opts { display: grid; gap: 10px; margin: 12px 0; }
+.opt {
+  font-size: 1.15rem; font-weight: 600; padding: 15px 16px; border-radius: 14px;
+  border: 2px solid var(--border); background: var(--card2); cursor: pointer;
+  transition: .1s; text-align: left; color: var(--ink);
+}
+.opt:active { transform: scale(.98); }
+.opt.correct { background: rgba(34,197,94,.15); border-color: var(--green); }
+.opt.wrong { background: rgba(239,68,68,.12); border-color: var(--red); }
+.opt.dim { opacity: .55; }
+.opt.picked { outline: 3px solid var(--orange); border-color: var(--orange); }
+
+.timer {
+  font-size: 2.8rem; font-weight: 900; color: var(--red);
+  font-variant-numeric: tabular-nums;
+}
+.timer.warn { animation: blink .45s infinite alternate; }
+@keyframes blink { from { opacity: 1; } to { opacity: .3; } }
+
+.bar {
+  background: var(--bg2); border-radius: 10px; overflow: hidden; margin: 6px 0; text-align: left;
+}
+.bar > div {
+  background: linear-gradient(90deg, var(--primary), var(--green));
+  color: #fff; font-weight: 700; padding: 8px 12px; border-radius: 10px;
+  white-space: nowrap; min-width: fit-content;
+}
+.bar.right > div { background: linear-gradient(90deg, var(--green), #059669); }
+
+/* ===== Score table ===== */
+table.score { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 1rem; }
+table.score td, table.score th { padding: 10px 8px; border-bottom: 1px solid var(--border); }
+table.score tr:last-child td { border-bottom: none; }
+
+/* ===== Podium ===== */
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin: 24px 0 12px; }
+.step {
+  border-radius: 14px 14px 0 0; padding: 14px 10px 12px; font-weight: 800; color: #fff;
+  min-width: 100px; text-align: center;
+}
+.step .medal { font-size: 2.4rem; display: block; }
+.step .nm { display: block; margin-top: 6px; font-size: 1rem; word-break: break-word; }
+.step .sc { display: block; font-size: .9rem; opacity: .9; }
+.s1 { background: linear-gradient(180deg, #fbbf24, #d97706); height: 180px; box-shadow: 0 -4px 24px rgba(251,191,36,.4); }
+.s2 { background: linear-gradient(180deg, #94a3b8, #64748b); height: 140px; }
+.s3 { background: linear-gradient(180deg, #f59e0b, #b45309); height: 110px; }
+
+/* ===== Explain ===== */
+.explain {
+  background: rgba(251,191,36,.1); border: 1px dashed var(--gold);
+  border-radius: 12px; padding: 12px 14px; margin: 12px 0; font-size: 1rem; text-align: left;
+}
+
+/* ===== Tags ===== */
+.tag {
+  display: inline-block; font-size: .75rem; font-weight: 700;
+  background: rgba(91,124,250,.2); color: var(--primary);
+  border-radius: 999px; padding: 3px 10px; margin-right: 6px;
+}
+
+/* ===== Bank ===== */
+.bankitem, .qrow {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin: 8px 0; text-align: left;
+}
+.qrow { flex-direction: column; align-items: flex-start; }
+.bankitem b, .qrow b { font-size: 1rem; }
+
+/* ===== AI ===== */
+.aimsg {
+  text-align: left; background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.35);
+  border-radius: 12px; padding: 12px 14px; margin: 8px 0; font-size: .95rem;
+}
+.aiguide {
+  text-align: left; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 14px; margin: 8px 0;
+}
+.aiguide summary { font-weight: 700; cursor: pointer; color: var(--primary); }
+.aiguide ol { margin: 8px 0; padding-left: 22px; line-height: 1.8; }
+.aiguide a { color: var(--primary); font-weight: 600; }
+.aiprev label {
+  display: block; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px; margin: 8px 0; cursor: pointer; text-align: left;
+}
+.imgprompt { font-size: .82rem; color: var(--purple); background: rgba(167,139,250,.1); border-radius: 8px; padding: 6px 10px; margin-top: 6px; display: block; }
+
+/* ===== Login ===== */
+.loginbox { max-width: 380px; margin: 0 auto; }
+.cfgwarn {
+  background: rgba(239,68,68,.12); border: 2px solid var(--red); color: #fca5a5;
+  border-radius: 12px; padding: 12px 14px; font-weight: 600; text-align: left; margin: 10px 0;
+}
+
+/* ===== Spinner ===== */
+.spin {
+  display: inline-block; width: 24px; height: 24px;
+  border: 3px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: sp .7s linear infinite; vertical-align: middle;
+}
+@keyframes sp { to { transform: rotate(360deg); } }
+
+/* ===== Combo / Streak ===== */
+.combo {
+  font-size: 1.5rem; font-weight: 900; color: var(--orange); margin: 8px 0;
+  animation: pop .4s;
+}
+.combo span { display: block; font-size: .95rem; color: var(--muted); font-weight: 700; }
+@keyframes pop { 0% { transform: scale(.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.streak {
+  background: rgba(245,158,11,.15); border: 1px solid var(--orange);
+  border-radius: 999px; padding: 1px 8px; font-size: .8rem; font-weight: 700; white-space: nowrap;
+}
+
+/* ===== Who box ===== */
+.whobox {
+  background: var(--card2); border: 2px solid var(--primary); border-radius: 12px;
+  padding: 12px 14px; margin: 12px 0; animation: pop .3s; text-align: left;
+}
+.whobox.ok { border-color: var(--green); background: rgba(34,197,94,.08); }
+.whobox.bad { border-color: var(--red); background: rgba(239,68,68,.08); }
+.whobox .plist { margin: 8px 0 0; }
+
+/* ===== Spin wheel ===== */
+.spinpanel {
+  background: linear-gradient(180deg, rgba(251,191,36,.12), rgba(245,158,11,.08));
+  border: 2px solid var(--gold); border-radius: 16px; padding: 16px; margin: 14px 0;
+  animation: pop .35s;
+}
+.spinpanel h3 { margin: .2em 0; color: var(--gold); }
+.spinwin { font-size: 1.5rem; font-weight: 900; color: var(--green); animation: pop .45s; }
+.spinwin span { display: block; font-size: 2.4rem; color: var(--orange); margin: 6px 0; }
+.wheelwrap { position: relative; display: inline-block; margin: 10px 0; }
+.wheelwrap canvas { max-width: 260px; width: 100%; height: auto; display: block; }
+.wheelcenter {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 80px; height: 80px; border-radius: 50%; border: 3px solid #92400e;
+  background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b);
+  font-weight: 900; font-size: 1.1rem; color: #78350f; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4); font-family: inherit;
+}
+.wheelcenter:disabled { opacity: .5; cursor: default; }
+.wheelcenter:not(:disabled):active { transform: translate(-50%,-50%) scale(.93); }
+
+/* ===== Reorder ===== */
+.sreorow {
+  display: flex; align-items: center; gap: 10px; background: var(--card2);
+  border: 2px solid var(--border); border-radius: 12px; padding: 10px 12px;
+  margin: 8px 0; font-size: 1.1rem; font-weight: 600; cursor: grab;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  transition: transform .12s, border-color .12s;
+}
+.sreorow.drag { opacity: .9; box-shadow: 0 8px 20px rgba(0,0,0,.35); cursor: grabbing; }
+.sreorow.over { border-color: var(--orange); background: rgba(245,158,11,.1); }
+.sreonum {
+  min-width: 34px; height: 34px; border-radius: 50%; background: var(--primary);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; flex-shrink: 0; font-size: .95rem;
+}
+.sreotxt { flex: 1; text-align: left; }
+.sreobtns { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.sreobtns .btn { padding: 4px 10px; font-size: .85rem; margin: 0; }
+
+/* ===== Theme adventure override ===== */
+body[data-theme="adventure"] {
+  --bg: #1a1208; --bg2: #241a0e; --card: #2a1f12; --card2: #352818;
+  --border: #4a3a22; --ink: #f5e6c8; --muted: #a89070;
+  --primary: #d29a4b; --primary2: #b5651d;
+}
+body[data-theme="adventure"]::before {
+  background:
+    radial-gradient(ellipse 70% 40% at 15% 0%, rgba(210,154,75,.2), transparent),
+    radial-gradient(ellipse 50% 30% at 85% 80%, rgba(181,101,29,.12), transparent);
+}
+
+/* ===== Toast ===== */
+#toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 999px;
+  font-weight: 700; font-size: 1rem; opacity: 0; transition: .3s; z-index: 200;
+  pointer-events: none; box-shadow: 0 6px 24px rgba(0,0,0,.4); max-width: 90vw;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== Plan badge ===== */
+.plan-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 16px; font-size: .9rem;
+}
+
+/* ===== Theme pick ===== */
+.themepick { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+.themebtn {
+  border: 2px solid var(--border); background: var(--card2); border-radius: 12px;
+  padding: 10px 16px; font-weight: 700; font-size: .95rem; cursor: pointer;
+  color: var(--ink); font-family: inherit; transition: .15s;
+}
+.themebtn.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 18%, transparent); }
+.themebtn.locked { opacity: .5; }
+
+/* ===== Form left-aligned ===== */
+.form-left { text-align: left; max-width: 560px; margin: 0 auto; }
+.form-left label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: .95rem; }
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.6rem; }
+  .pin { font-size: 2.8rem; letter-spacing: .2em; }
+  .qtext { font-size: 1.25rem; }
+  .btn.big { font-size: 1.1rem; padding: 16px 24px; }
+  .step { min-width: 85px; }
+  .s1 { height: 150px; } .s2 { height: 120px; } .s3 { height: 95px; }
+}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="wrap">
+  <div class="toolbar">
+    <div class="brand">⚡ <span>QuizLive</span></div>
+    <div class="actions">
+      <button class="toolbtn" id="musicBtn" onclick="toggleMusic()">🔇</button>
+      <button class="toolbtn" onclick="goHome()">🏠</button>
+    </div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+/* =====================================================================
+   CẤU HÌNH — Điền Supabase PROJECT MỚI của bạn (không dùng project cũ)
+   =====================================================================
+   1. Vào https://supabase.com → New project
+   2. Project Settings → API → copy Project URL + anon public key
+   3. Dán vào 2 dòng bên dưới
+   4. Chạy SQL migration (màn hình setup sẽ hiện khi chưa cấu hình)
+   ===================================================================== */
+const CONFIG = {
+  SUPABASE_URL: "https://bfizgofyvcbonjseaprg.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmaXpnb2Z5dmNib25qc2VhcHJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMDcyNzgsImV4cCI6MjEwNzY4MzI3OH0.rLbGegEwlTjzDIEcj3QEjh6antUDNMOTZ5H5GS4CYVE",
+};
+
+const QUESTION_TIME = 20;
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest"];
+
+/* Bộ đề mẫu khi ngân hàng trống */
+const FALLBACK_SET = {
+  "📌 Mẫu: Thông tin trên trang web": [
+    { type: "choice", q: "Trên trang web thường có những loại thông tin nào?", options: ["Chỉ có văn bản", "Văn bản, hình ảnh, âm thanh, video và siêu liên kết", "Chỉ có hình ảnh và video", "Chỉ có trò chơi và quảng cáo"], correct: 1, explain: "Trang web có nhiều loại thông tin: văn bản, hình ảnh, âm thanh, video và siêu liên kết.", image_url: "" },
+    { type: "truefalse", q: "Thông tin trên mạng nào cũng đáng tin cậy, em không cần kiểm tra.", options: ["Đúng", "Sai"], correct: 1, explain: "Cần dùng “bộ lọc 3 Có”: tác giả rõ ràng, có ngày tháng cập nhật, trình bày phù hợp.", image_url: "" },
+    { type: "choice", q: "Một trang web lạ yêu cầu em nhập họ tên, địa chỉ nhà và số điện thoại để nhận quà. Em nên làm gì?", options: ["Nhập ngay để nhận quà kẻo hết", "Nhờ bạn thân nhập hộ mình", "Dừng lại, giữ kín thông tin và hỏi ý kiến người lớn", "Nhập bừa thông tin giả cho vui"], correct: 2, explain: "Gặp trang web lạ, em dừng lại. Thông tin riêng tư, em giữ kín. Chưa chắc chắn, em hỏi người lớn.", image_url: "" }
+  ]
+};
+</script>
+
+<script>
+/* ================= ÂM THANH ================= */
+let AC = null, musicOn = false, musicTimer = null;
+function ac() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (AC && AC.state === "suspended") AC.resume();
+  return AC;
+}
+function tone(f, d = 0.15, type = "sine", v = 0.22, delay = 0) {
+  const c = ac(); if (!c) return;
+  const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + delay;
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(v, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + d + 0.05);
+}
+const SFX = {
+  click() { tone(600, 0.08, "square", 0.12); },
+  join() { tone(523, 0.12); tone(659, 0.12, "sine", 0.22, 0.1); tone(784, 0.2, "sine", 0.22, 0.2); },
+  correct() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, "sine", 0.25, i * 0.09)); },
+  wrong() { tone(330, 0.25, "sawtooth", 0.12); tone(220, 0.35, "sawtooth", 0.12, 0.15); },
+  tick() { tone(880, 0.06, "square", 0.08); },
+  urgent() { [659, 784, 880, 1047].forEach((f, i) => tone(f, 0.12, "triangle", 0.28, i * 0.11)); },
+  fanfare() { [523, 523, 659, 784, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.22, "triangle", 0.25, i * 0.16)); },
+  victory() {
+    const mel = [[392,0,.16],[523,.16,.16],[659,.32,.16],[784,.48,.5],[784,1.08,.14],[880,1.22,.14],[1047,1.36,.7],[1047,2.18,.16],[988,2.34,.16],[1047,2.5,1.1]];
+    mel.forEach(([f, t, d]) => tone(f, d, "triangle", 0.85, t));
+    [0, 1.08, 2.18].forEach(t => { tone(130.8, 0.5, "sine", 0.5, t); tone(196, 0.35, "sine", 0.3, t); });
+  }
+};
+const MELODY = [523, 587, 659, 784, 880, 784, 659, 587, 523, 587, 659, 659, 587, 523, 440, 523];
+function toggleMusic() {
+  musicOn = !musicOn;
+  document.getElementById("musicBtn").textContent = musicOn ? "🎵" : "🔇";
+  if (musicOn) {
+    let i = 0; SFX.click();
+    musicTimer = setInterval(() => { tone(MELODY[i % MELODY.length], 0.28, "triangle", 0.08); i++; }, 300);
+  } else clearInterval(musicTimer);
+}
+
+/* Lobby music (admin only) */
+const LobbyMusic = {
+  timer: null, step: 0, nextT: 0, on: true, BPM: 108,
+  chords: [[60,64,67],[55,59,62],[57,60,64],[53,57,60]],
+  bass: [48,43,45,41],
+  mel: [[64,0,67,0,69,0,67,0],[62,0,65,0,67,0,65,0],[69,0,72,0,69,0,67,0],[65,0,64,0,62,0,64,0]],
+  mf(n) { return 440 * Math.pow(2, (n - 69) / 12); },
+  mtone(f, when, d, type, v) {
+    const c = AC; if (!c) return;
+    try {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(v, when + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + d);
+      o.connect(g); g.connect(c.destination); o.start(when); o.stop(when + d + 0.05);
+    } catch (e) {}
+  },
+  start() {
+    const c = ac(); if (!c || !this.on) return;
+    this.stop(); this.step = 0; this.nextT = c.currentTime + 0.15;
+    this.timer = setInterval(() => this.sched(), 90);
+  },
+  stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+  sched() {
+    const c = AC; if (!c || !this.timer) return;
+    if (c.state !== "running") { try { c.resume(); } catch (e) {} return; }
+    const e8 = 60 / this.BPM / 2; let guard = 0;
+    while (this.nextT < c.currentTime + 0.4 && guard++ < 16) {
+      this.playStep(this.step, this.nextT);
+      this.nextT += e8; this.step = (this.step + 1) % 32;
+    }
+  },
+  playStep(s, t) {
+    const bar = (s / 8) | 0, st = s % 8;
+    if (st === 0 || st === 4) this.mtone(this.mf(this.bass[bar]), t, 0.3, "sine", 0.12);
+    if (st % 2 === 0) this.chords[bar].forEach(f => this.mtone(this.mf(f), t, 0.18, "triangle", 0.04));
+    const m = this.mel[bar][st];
+    if (m) this.mtone(this.mf(m), t, 0.24, "triangle", 0.1);
+  }
+};
+function toggleLobbyMusic() {
+  LobbyMusic.on = !LobbyMusic.on;
+  const b = document.getElementById("lobbyMusicBtn");
+  if (b) b.textContent = LobbyMusic.on ? "🎵 Nhạc chờ: Bật" : "🔇 Nhạc chờ: Tắt";
+  SFX.click();
+  if (LobbyMusic.on) LobbyMusic.start(); else LobbyMusic.stop();
+}
+
+/* ================= PHÁO HOA ================= */
+const fxC = document.getElementById("fx"), fxX = fxC.getContext("2d");
+let parts = [], fxRun = false;
+function fxSize() { fxC.width = innerWidth; fxC.height = innerHeight; }
+addEventListener("resize", fxSize); fxSize();
+function boom(x, y, n = 55) {
+  const cols = ["#fbbf24", "#ef4444", "#5b7cfa", "#22c55e", "#a78bfa", "#fff"];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 6;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 55 + Math.random() * 40, c: cols[i % cols.length] });
+  }
+  if (!fxRun) { fxRun = true; requestAnimationFrame(fxTick); }
+}
+function fireworks(n = 5) { for (let i = 0; i < n; i++) setTimeout(() => boom(Math.random() * fxC.width, Math.random() * fxC.height * 0.55), i * 320); }
+function fxTick() {
+  fxX.clearRect(0, 0, fxC.width, fxC.height);
+  parts = parts.filter(p => p.life > 0);
+  parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life--;
+    fxX.globalAlpha = Math.min(1, p.life / 35); fxX.fillStyle = p.c;
+    fxX.beginPath(); fxX.arc(p.x, p.y, 3, 0, 7); fxX.fill();
+  });
+  fxX.globalAlpha = 1;
+  if (parts.length) requestAnimationFrame(fxTick); else { fxRun = false; fxX.clearRect(0, 0, fxC.width, fxC.height); }
+}
+
+/* ================= STATE ================= */
+let sb = null, mode = null, room = null, players = [], answers = [];
+let myPlayer = null, myAnswer = null, timerInt = null;
+let channel = null, channel2 = null, channel3 = null, lastTick = 99, locking = false;
+let bank = [], aiResult = null, editingQ = null, bankReadOnly = false;
+let roomTheme = "classic";
+let roomAnsAll = [], streakMap = {};
+let lockedOnce = false;
+let sCur = -1;
+let sOrd = [], sOrder = [];
+let reoDrag = null, reoDragOi = null;
+const SPIN_SEGS = [25, 10, 20, 1, 15, 10, 20, 15];
+const SPIN_EVERY = 3;
+let spinBusy = false, sSpinCorrect = 0;
+let pendingTab = null;
+
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function canAdventure() { return !!sess(); }
+function pickTheme(t) {
+  if (t === "adventure" && !canAdventure()) {
+    alert("Đăng nhập tài khoản để mở giao diện Phiêu lưu (tài khoản dùng thử cũng được).");
+    return;
+  }
+  roomTheme = t; SFX.click();
+  document.querySelectorAll(".themebtn").forEach(b => b.classList.toggle("on", b.dataset.theme === t));
+}
+function applyTheme() {
+  document.body.dataset.theme = ((room && room.theme) || "classic") === "adventure" ? "adventure" : "classic";
+}
+
+function streakOf(rows, cur) {
+  let st = 0;
+  for (let i = cur; i >= 0; i--) {
+    const a = rows.find(r => r.q_index === i);
+    if (a && a.is_correct) st++; else break;
+  }
+  return st;
+}
+function comboBonus(st) { return st >= 2 ? (st - 1) * 25 : 0; }
+async function ensureAnsAll() {
+  if (roomAnsAll.length || !room) return;
+  try {
+    const r = await sb.from("answers").select("player_id,q_index,is_correct").eq("room_id", room.id);
+    roomAnsAll = r.data || [];
+  } catch (e) {}
+}
+
+function goHome() { location.reload(); }
+function qNow() { return (room && room.question_set && room.question_set[room.current]) || null; }
+
+function optOrder(q) {
+  const n = (q && q.options) ? q.options.length : 0;
+  const seedStr = ((room && room.id) ? room.id : "") + "#" + ((room && typeof room.current !== "undefined") ? room.current : 0);
+  let h = 2166136261;
+  for (let k = 0; k < seedStr.length; k++) { h ^= seedStr.charCodeAt(k); h = Math.imul(h, 16777619); }
+  let s = h >>> 0;
+  const rnd = () => {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const a = []; for (let i = 0; i < n; i++) a.push(i);
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function remain() {
+  if (!room || !room.question_started_at) return QUESTION_TIME;
+  return Math.max(0, QUESTION_TIME - Math.floor((Date.now() - new Date(room.question_started_at).getTime()) / 1000));
+}
+function isConfigured() {
+  return CONFIG.SUPABASE_URL && !CONFIG.SUPABASE_URL.includes("DÁN_URL")
+    && CONFIG.SUPABASE_ANON_KEY && !CONFIG.SUPABASE_ANON_KEY.includes("DÁN_ANON");
+}
+function sbInit() {
+  if (!isConfigured()) return null;
+  sb = sb || supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  return sb;
+}
+function qImg(q) { return q.image_url ? `<img class="qimg" src="${esc(q.image_url)}" alt="" onerror="this.style.display='none'">` : ""; }
+function typeTag(q) {
+  if (q.type === "truefalse") return '<span class="tag">Đúng/Sai</span>';
+  if (q.type === "reorder") return '<span class="tag">🔢 Sắp xếp</span>';
+  if (q.type === "fillblank") return '<span class="tag">✏️ Điền từ</span>';
+  return '<span class="tag">Trắc nghiệm</span>';
+}
+function normBlank(s) { return String(s || "").toLowerCase().trim().replace(/\s+/g, " "); }
+function stripAcc(s) { return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "d"); }
+function blankCorrect(q, ans) {
+  const a = normBlank(ans); if (!a) return false;
+  return (q.options || []).some(o => {
+    const b = normBlank(o);
+    return b && (b === a || stripAcc(b) === stripAcc(a));
+  });
+}
+
+/* ---- Session ---- */
+async function sha256(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+function sess() { try { return JSON.parse(sessionStorage.getItem("ql_sess") || "null"); } catch (e) { return null; } }
+function planBadge(s) {
+  if (!s) return "";
+  if (s.plan === "owner") return `👑 <b>Admin</b>`;
+  if (s.plan === "paid") return `👤 ${esc(s.u)} · <b style="color:var(--green)">Thương mại</b>`;
+  return `👤 ${esc(s.u)} · <b style="color:var(--orange)">Dùng thử</b>`;
+}
+function unsubAll() {
+  [channel, channel2, channel3].forEach(c => { try { c && c.unsubscribe(); } catch (e) {} });
+  channel = channel2 = channel3 = null;
+  if (timerInt) { clearInterval(timerInt); timerInt = null; }
+}
+
+function toast(html) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.innerHTML = html; t.classList.add("show");
+  clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+/* ================= HOME ================= */
+function showHome() {
+  mode = null; document.body.dataset.theme = "classic"; LobbyMusic.stop();
+  app.innerHTML = `
+  <div class="card">
+    <div class="home-hero">
+      <div class="logo">⚡</div>
+      <h1>QuizLive</h1>
+      <p class="sub">Trắc nghiệm trực tiếp cả lớp — nhanh, vui, realtime</p>
+    </div>
+    <div class="role-grid">
+      <div class="role-card teacher" onclick="SFX.click();showTeacher()">
+        <div class="icon">👨‍🏫</div>
+        <div>
+          <h3>Giáo viên</h3>
+          <p>Tạo phòng · Ngân hàng đề · AI</p>
+        </div>
+      </div>
+      <div class="role-card student" onclick="SFX.click();showStudentJoin()">
+        <div class="icon">🎒</div>
+        <div>
+          <h3>Học sinh</h3>
+          <p>Vào phòng bằng mã PIN</p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      Phát triển bởi <b>Lê Hữu Trí</b><br>
+      <a href="https://www.facebook.com/share/1CK2zFdePv/?mibextid=wwXIfr" target="_blank" rel="noopener">📘 Facebook</a>
+      &nbsp;·&nbsp;
+      <a href="https://zalo.me/0389216492" target="_blank" rel="noopener">💬 Zalo: 0389216492</a>
+    </div>
+  </div>`;
+}
+
+/* ================= TEACHER AUTH ================= */
+/* Đăng nhập owner mặc định — ĐỔI mật khẩu này trước khi public */
+const ADMIN_USER = "admin", ADMIN_PASS = "171218";
+
+function showTeacher() {
+  if (!sbInit()) { showSetup(); return; }
+  pendingTab = null; LobbyMusic.stop();
+  showTeacherMain();
+}
+
+async function tLogin() {
+  const u = document.getElementById("adUser").value.trim();
+  const p = document.getElementById("adPass").value;
+  const errBox = document.getElementById("loginErr");
+  const err = m => { errBox.innerHTML = `<div class="cfgwarn">⚠️ ${m}</div>`; };
+  if (!u || !p) { err("Nhập tên đăng nhập và mật khẩu."); return; }
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    sessionStorage.setItem("ql_sess", JSON.stringify({ u: "Admin", plan: "owner", exp: null }));
+    SFX.correct(); const pt = pendingTab; pendingTab = null; showTeacherMain(pt); return;
+  }
+  try {
+    const h = await sha256(p);
+    const { data, error } = await sb.from("licenses").select("*").eq("username", u).eq("pass_hash", h).limit(1);
+    if (error) throw error;
+    if (!data || !data.length) { SFX.wrong(); err("Sai tên đăng nhập hoặc mật khẩu."); return; }
+    const acc = data[0];
+    if (acc.plan === "trial" && acc.expires_at && new Date(acc.expires_at) < new Date()) {
+      SFX.wrong();
+      err(`Tài khoản dùng thử đã hết hạn.<br>Liên hệ <b>Lê Hữu Trí</b> để nâng cấp:<br>
+        <a href="https://www.facebook.com/share/1CK2zFdePv/?mibextid=wwXIfr" target="_blank" rel="noopener">📘 Facebook</a> ·
+        <a href="https://zalo.me/0389216492" target="_blank" rel="noopener">💬 Zalo: 0389216492</a>`);
+      return;
+    }
+    sessionStorage.setItem("ql_sess", JSON.stringify({ u: acc.username, plan: acc.plan, exp: acc.expires_at }));
+    SFX.correct(); const pt = pendingTab; pendingTab = null; showTeacherMain(pt);
+  } catch (e) { SFX.wrong(); err("Không kiểm tra được tài khoản. Kiểm tra mạng rồi thử lại."); }
+}
+
+function tLogout() { sessionStorage.removeItem("ql_sess"); pendingTab = null; SFX.click(); showTeacherMain(); }
+
+function showTeacherMain(afterTab) {
+  mode = "teacher";
+  const s = sess();
+  app.innerHTML = `
+  <div class="card">
+    ${s ? `<div class="plan-bar"><span>${planBadge(s)}</span><button class="btn small red" onclick="tLogout()">Đăng xuất</button></div>` : ""}
+    <h2>Khu vực giáo viên</h2>
+    <div class="tabs">
+      <button class="tab on" id="tabRoom" onclick="SFX.click();tTab('room')">🚀 Tạo phòng</button>
+      <button class="tab" id="tabBank" onclick="SFX.click();tTab('bank')">📚 Ngân hàng ${s ? "" : "🔒"}</button>
+      <button class="tab" id="tabAI" onclick="SFX.click();tTab('ai')">🤖 AI ${s ? "" : "🔒"}</button>
+    </div>
+    <div id="tBody"><span class="spin"></span> Đang tải...</div>
+  </div>`;
+  tTab(afterTab || "room");
+}
+
+async function tTab(which) {
+  const ids = { room: "tabRoom", bank: "tabBank", ai: "tabAI" };
+  Object.entries(ids).forEach(([t, id]) => {
+    const e = document.getElementById(id);
+    if (e) e.classList.toggle("on", t === which);
+  });
+  if ((which === "bank" || which === "ai") && !sess()) {
+    pendingTab = which;
+    const tn = which === "bank" ? "Ngân hàng câu hỏi" : "AI tạo câu hỏi";
+    document.getElementById("tBody").innerHTML = `
+    <div class="loginbox">
+      <h3>🔒 ${tn}</h3>
+      <p class="sub">Đăng nhập để sử dụng tính năng nâng cao.<br>
+        Liên hệ <b>Lê Hữu Trí</b> để được cấp quyền:<br>
+        <a href="https://www.facebook.com/share/1CK2zFdePv/?mibextid=wwXIfr" target="_blank" rel="noopener">📘 Facebook</a>
+        &nbsp;·&nbsp;
+        <a href="https://zalo.me/0389216492" target="_blank" rel="noopener">💬 Zalo: 0389216492</a>
+      </p>
+      <input type="text" id="adUser" placeholder="Tên đăng nhập" autocomplete="username" onkeydown="if(event.key==='Enter')tLogin()">
+      <input type="password" id="adPass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')tLogin()">
+      <div id="loginErr"></div>
+      <button class="btn big green" onclick="tLogin()">Đăng nhập</button>
+    </div>`;
+    return;
+  }
+  if (which === "room") return tRoomTab();
+  if (which === "bank") return tBankTab();
+  return tAITab();
+}
+
+async function loadBank() {
+  try {
+    const { data, error } = await sb.from("question_bank").select("*").order("created_at", { ascending: true });
+    if (error) throw error;
+    bank = data || [];
+    if (!bank.length) {
+      for (const [nm, qs] of Object.entries(FALLBACK_SET))
+        await sb.from("question_bank").insert({ set_name: nm, questions: qs });
+      const r = await sb.from("question_bank").select("*").order("created_at", { ascending: true });
+      bank = r.data || [];
+    }
+  } catch (e) {
+    bankReadOnly = true;
+    bank = Object.entries(FALLBACK_SET).map(([set_name, questions], i) => ({ id: "fb" + i, set_name, questions }));
+  }
+}
+
+function tRoomTab() {
+  loadBank().then(() => {
+    roomTheme = "classic";
+    const sets = bank.map(s => `<option value="${s.id}">${esc(s.set_name)} (${s.questions.length} câu)</option>`).join("");
+    const advBtn = canAdventure()
+      ? `<button class="themebtn" data-theme="adventure" onclick="pickTheme('adventure')">🗺️ Phiêu lưu</button>`
+      : `<button class="themebtn locked" data-theme="adventure" onclick="pickTheme('adventure')">🔒 Phiêu lưu</button>`;
+    document.getElementById("tBody").innerHTML = `
+      <p class="sub">Chọn bộ đề → tạo phòng → hiện PIN cho cả lớp</p>
+      <p><select id="setSel">${sets}</select></p>
+      <p style="margin:.6em 0 .2em"><b>Giao diện phòng</b></p>
+      <div class="themepick">
+        <button class="themebtn on" data-theme="classic" onclick="pickTheme('classic')">📝 Cổ điển</button>
+        ${advBtn}
+      </div>
+      ${canAdventure() ? "" : `<p class="note">Đăng nhập để mở giao diện Phiêu lưu</p>`}
+      <br>
+      <button class="btn big green" onclick="tCreateRoom()">🚀 Tạo phòng</button><br>
+      <button class="btn small ghost" onclick="showTeacherRejoin()">Vào lại phòng cũ</button>`;
+  });
+}
+
+/* ================= BANK ================= */
+function isDefaultSet(s) { return !!(s && s.set_name && String(s.set_name).startsWith("📌")); }
+
+function tBankTab() {
+  loadBank().then(() => {
+    const items = bank.map(s => {
+      const def = isDefaultSet(s);
+      return `<div class="bankitem">
+        <div><b>${esc(s.set_name)}</b>${def ? ` <span class="tag">Mặc định</span>` : ""}<br>
+        <span class="note">${s.questions.length} câu hỏi</span></div>
+        <div>
+          <button class="btn small" onclick="tSetDetail('${s.id}')">${def ? "Xem" : "Sửa"}</button>
+          ${bankReadOnly || def ? "" : `<button class="btn small red" onclick="tDelSet('${s.id}')">Xóa</button>`}
+        </div>
+      </div>`;
+    }).join("");
+    document.getElementById("tBody").innerHTML = `
+      ${bankReadOnly ? `<div class="cfgwarn">Chưa kết nối được bảng ngân hàng. Chạy file migration SQL rồi tải lại trang.</div>` : ""}
+      <div class="form-left">${items || '<p class="note">Chưa có bộ đề nào.</p>'}</div>
+      ${bankReadOnly ? "" : `<button class="btn green" onclick="tNewSet()">➕ Tạo bộ đề mới</button>`}
+      <p class="note" style="margin-top:12px">Bộ đề lưu trên Supabase — dùng máy nào cũng thấy.</p>`;
+  });
+}
+
+async function tNewSet() {
+  if (bankReadOnly) { alert("Chạy migration SQL trước."); return; }
+  const nm = prompt("Tên bộ đề mới:"); if (!nm) return;
+  const { data } = await sb.from("question_bank").insert({ set_name: nm, questions: [] }).select().single();
+  if (data) { bank.push(data); tSetDetail(data.id); }
+  else alert("Không lưu được. Kiểm tra mạng.");
+}
+
+async function tDelSet(id) {
+  const s = bank.find(x => x.id === id);
+  if (isDefaultSet(s)) { alert("Bộ đề mặc định không thể xóa."); return; }
+  if (!confirm(`Xóa bộ đề "${s ? s.set_name : ""}"?`)) return;
+  if (!String(id).startsWith("fb")) await sb.from("question_bank").delete().eq("id", id);
+  bank = bank.filter(x => x.id !== id); tBankTab();
+}
+
+function tSetDetail(id) {
+  const s = bank.find(x => x.id === id); if (!s) return;
+  const def = isDefaultSet(s);
+  const rows = s.questions.map((q, i) => `
+    <div class="qrow">${typeTag(q)}<b>Câu ${i + 1}:</b> ${esc(q.q)}
+      ${bankReadOnly || def ? "" : `<div style="margin-top:8px">
+        <button class="btn small" onclick="tQForm('${id}',${i})">Sửa</button>
+        <button class="btn small red" onclick="tQDel('${id}',${i})">Xóa</button>
+      </div>`}
+    </div>`).join("");
+  document.getElementById("tBody").innerHTML = `
+    <h3>${esc(s.set_name)} (${s.questions.length} câu)${def ? ` <span class="tag">Mặc định</span>` : ""}</h3>
+    ${def ? `<p class="note">Bộ đề mặc định — không thể sửa/xóa.</p>` : ""}
+    <div class="form-left">${rows || '<p class="note">Chưa có câu hỏi.</p>'}</div>
+    ${bankReadOnly || def ? "" : `
+      <button class="btn green" onclick="tQForm('${id}',-1)">➕ Thêm câu</button>
+      <button class="btn purple" onclick="tBulkForm('${id}')">📥 Nhập hàng loạt</button>`}
+    <button class="btn ghost" onclick="tBankTab()">← Về danh sách</button>`;
+}
+
+function tQDel(sid, i) {
+  const s = bank.find(x => x.id === sid);
+  if (isDefaultSet(s)) { alert("Không thể xóa câu hỏi mặc định."); return; }
+  if (!confirm("Xóa câu hỏi này?")) return;
+  s.questions.splice(i, 1); tQSave(sid);
+}
+
+async function tQSave(sid) {
+  const s = bank.find(x => x.id === sid);
+  if (isDefaultSet(s)) { alert("Không thể sửa bộ đề mặc định."); tSetDetail(sid); return; }
+  if (!String(sid).startsWith("fb")) await sb.from("question_bank").update({ questions: s.questions }).eq("id", sid);
+  tSetDetail(sid);
+}
+
+function tQOptInputs(t, q) {
+  const opts = (q && q.options) || [];
+  if (t === "truefalse") return `<p class="note">Đúng / Sai — 2 đáp án cố định.</p>`;
+  if (t === "reorder") return `<label>Các bước (đúng thứ tự 1→4)</label>` +
+    [0,1,2,3].map(j => `<input type="text" id="opt${j}" placeholder="Bước ${j+1}" value="${esc(opts[j]||"")}">`).join("") +
+    `<p class="note">Khi chơi thứ tự sẽ bị xáo trộn.</p>`;
+  if (t === "fillblank") return `<label>Đáp án đúng (có thể thêm biến thể)</label>` +
+    [0,1,2].map(j => `<input type="text" id="opt${j}" placeholder="${j===0?"Đáp án (bắt buộc)":"Cách viết khác"}" value="${esc(opts[j]||"")}">`).join("") +
+    `<p class="note">Chấp nhận hoa/thường và không dấu.</p>`;
+  return `<label>Các đáp án</label>` +
+    [0,1,2,3].map(j => `<input type="text" id="opt${j}" placeholder="Đáp án ${j+1}" value="${esc(opts[j]||"")}">`).join("");
+}
+
+function tQForm(sid, i) {
+  const s = bank.find(x => x.id === sid);
+  const q = i >= 0 ? s.questions[i] : { type: "choice", q: "", options: ["","","",""], correct: 0, explain: "", image_url: "" };
+  editingQ = { sid, i };
+  const typeOpts = [["choice","Trắc nghiệm 4 đáp án"],["truefalse","Đúng / Sai"],["reorder","Sắp xếp thứ tự"],["fillblank","Điền từ"]]
+    .map(([v,l]) => `<option value="${v}" ${q.type===v?"selected":""}>${l}</option>`).join("");
+  const hideCorrect = (q.type === "reorder" || q.type === "fillblank");
+  document.getElementById("tBody").innerHTML = `
+    <h3>${i >= 0 ? "Sửa câu hỏi" : "Thêm câu hỏi"} — ${esc(s.set_name)}</h3>
+    <div class="form-left">
+      <label>Dạng câu hỏi</label>
+      <select id="qType" onchange="tQTypeChange()">${typeOpts}</select>
+      <label>Câu hỏi</label>
+      <textarea id="qText" placeholder="Nhập câu hỏi...">${esc(q.q)}</textarea>
+      <div id="optBox">${tQOptInputs(q.type, q)}</div>
+      <div id="correctBox" style="${hideCorrect?"display:none":""}">
+        <label>Đáp án đúng (số thứ tự từ 1)</label>
+        <input type="text" id="qCorrect" inputmode="numeric" value="${(q.correct??0)+1}" style="max-width:100px">
+      </div>
+      <label>Giải thích (hiện sau khi chốt)</label>
+      <textarea id="qExplain" placeholder="Giải thích...">${esc(q.explain||"")}</textarea>
+      <label>Link hình minh họa (tùy chọn)</label>
+      <input type="text" id="qImg" placeholder="https://..." value="${esc(q.image_url||"")}">
+      <br><br>
+      <button class="btn big green" onclick="tQSubmit()">Lưu câu hỏi</button>
+      <button class="btn ghost" onclick="tSetDetail('${sid}')">Hủy</button>
+    </div>`;
+}
+
+function tQTypeChange() {
+  const t = document.getElementById("qType").value;
+  document.getElementById("optBox").innerHTML = tQOptInputs(t, { options: [] });
+  document.getElementById("correctBox").style.display = (t === "reorder" || t === "fillblank") ? "none" : "";
+}
+
+function tQSubmit() {
+  const { sid, i } = editingQ;
+  const s = bank.find(x => x.id === sid);
+  const type = document.getElementById("qType").value;
+  const qText = document.getElementById("qText").value.trim();
+  if (!qText) { alert("Nhập câu hỏi."); return; }
+  let options, correct;
+  if (type === "truefalse") {
+    options = ["Đúng", "Sai"];
+    correct = parseInt(document.getElementById("qCorrect").value) - 1;
+  } else if (type === "reorder") {
+    options = [0,1,2,3].map(j => document.getElementById("opt"+j).value.trim());
+    if (options.some(o => !o)) { alert("Nhập đủ 4 bước."); return; }
+    correct = 0;
+  } else if (type === "fillblank") {
+    options = [0,1,2].map(j => document.getElementById("opt"+j).value.trim()).filter(o => o);
+    if (!options.length) { alert("Nhập ít nhất 1 đáp án đúng."); return; }
+    correct = 0;
+  } else {
+    options = [0,1,2,3].map(j => document.getElementById("opt"+j).value.trim());
+    if (options.some(o => !o)) { alert("Nhập đủ 4 đáp án."); return; }
+    correct = parseInt(document.getElementById("qCorrect").value) - 1;
+  }
+  if (!(correct >= 0 && correct < options.length)) { alert("Số thứ tự đáp án đúng không hợp lệ."); return; }
+  const q = {
+    type, q: qText, options, correct,
+    explain: document.getElementById("qExplain").value.trim(),
+    image_url: document.getElementById("qImg").value.trim()
+  };
+  if (i >= 0) s.questions[i] = q; else s.questions.push(q);
+  SFX.correct(); tQSave(sid);
+}
+
+function tBulkForm(sid) {
+  const s = bank.find(x => x.id === sid); if (!s) return;
+  document.getElementById("tBody").innerHTML = `
+    <h3>Nhập hàng loạt — ${esc(s.set_name)}</h3>
+    <div class="form-left">
+      <p class="note">Dán JSON danh sách câu hỏi.
+        <button class="btn small" onclick="tBulkSample()">Xem mẫu</button></p>
+      <textarea id="bulkText" style="min-height:200px;font-family:monospace;font-size:.88rem"
+        placeholder='[{"type":"choice","q":"...","options":["A","B","C","D"],"correct":0,"explain":"..."}]'></textarea>
+      <div id="bulkErr"></div>
+      <button class="btn big green" onclick="tBulkSubmit('${sid}')">Nhập</button>
+      <button class="btn ghost" onclick="tSetDetail('${sid}')">Hủy</button>
+    </div>`;
+}
+
+function tBulkSample() {
+  document.getElementById("bulkText").value = JSON.stringify([
+    { type: "choice", q: "Câu hỏi ví dụ?", options: ["Đáp án 1","Đáp án 2","Đáp án 3","Đáp án 4"], correct: 1, explain: "...", image_url: "" },
+    { type: "truefalse", q: "Câu đúng/sai?", options: ["Đúng","Sai"], correct: 0, explain: "...", image_url: "" },
+    { type: "reorder", q: "Xếp đúng thứ tự rửa tay?", options: ["Làm ướt tay","Thoa xà phòng","Chà kỹ","Rửa sạch"], correct: 0, explain: "...", image_url: "" },
+    { type: "fillblank", q: "Thủ đô Việt Nam là ...", options: ["Hà Nội","Ha Noi"], correct: 0, explain: "...", image_url: "" }
+  ], null, 2);
+}
+
+function tBulkSubmit(sid) {
+  const s = bank.find(x => x.id === sid); if (!s) return;
+  if (isDefaultSet(s)) { alert("Không thể thêm vào bộ đề mặc định."); return; }
+  let arr;
+  try { arr = JSON.parse(document.getElementById("bulkText").value); if (!Array.isArray(arr)) throw 0; }
+  catch (e) {
+    document.getElementById("bulkErr").innerHTML = `<div class="cfgwarn">JSON không hợp lệ. Bấm "Xem mẫu".</div>`;
+    return;
+  }
+  const ok = [];
+  const TYPES = ["choice","truefalse","reorder","fillblank"];
+  for (const x of arr) {
+    if (!x || !x.q) continue;
+    const type = TYPES.includes(x.type) ? x.type : "choice";
+    let options = null;
+    if (type === "truefalse") options = ["Đúng","Sai"];
+    else if (type === "fillblank") {
+      const a = Array.isArray(x.options) ? x.options.map(String).filter(o => o.trim()) : [];
+      if (a.length) options = a;
+    } else if (Array.isArray(x.options) && x.options.length === 4 && x.options.every(o => String(o).trim()))
+      options = x.options.map(String);
+    if (!options) continue;
+    let correct = type === "choice" ? (parseInt(x.correct) || 0) : 0;
+    if (correct < 0 || correct >= options.length) correct = 0;
+    ok.push({ type, q: String(x.q), options, correct, explain: String(x.explain || ""), image_url: String(x.image_url || "") });
+  }
+  if (!ok.length) {
+    document.getElementById("bulkErr").innerHTML = `<div class="cfgwarn">Không có câu hỏi hợp lệ.</div>`;
+    return;
+  }
+  s.questions = s.questions.concat(ok);
+  SFX.fanfare(); fireworks(3); tQSave(sid);
+}
+
+/* ================= AI ================= */
+function tAITab() {
+  const key = localStorage.getItem("gemini_key") || "";
+  document.getElementById("tBody").innerHTML = `
+  <div class="form-left">
+    <div class="aimsg">
+      <b>Trợ lý AI tạo câu hỏi.</b> Nhập ý tưởng (VD: "an toàn mạng xã hội, lớp 4, 5 câu"),
+      AI sinh đủ 4 dạng câu kèm giải thích. Duyệt rồi lưu vào ngân hàng.
+    </div>
+    <details class="aiguide">
+      <summary>Cách lấy Gemini API key miễn phí</summary>
+      <ol>
+        <li>Mở <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>, đăng nhập Google.</li>
+        <li>Bấm <b>Create API key</b>.</li>
+        <li>Sao chép key và dán vào ô bên dưới.</li>
+      </ol>
+      <p class="note">Key chỉ lưu trên máy bạn — không chia sẻ.</p>
+    </details>
+    <label>Gemini API key</label>
+    <input type="password" id="gKey" placeholder="Dán key..." value="${esc(key)}">
+    <label>Ý tưởng / chủ đề</label>
+    <textarea id="gIdea" placeholder="VD: Ôn tập thông tin trên trang web cho học sinh lớp 4"></textarea>
+    <label>Số câu</label>
+    <select id="gCount" style="max-width:140px"><option>3</option><option selected>5</option><option>10</option></select>
+    <br><br>
+    <button class="btn big purple" id="gBtn" onclick="aiGenerate()">✨ Sinh câu hỏi</button>
+    <div id="gOut" style="margin-top:14px"></div>
+  </div>`;
+}
+
+async function aiGenerate() {
+  const key = document.getElementById("gKey").value.trim();
+  const idea = document.getElementById("gIdea").value.trim();
+  const n = document.getElementById("gCount").value;
+  if (!key) { alert("Dán Gemini API key trước."); return; }
+  if (!idea) { alert("Nhập ý tưởng/chủ đề."); return; }
+  localStorage.setItem("gemini_key", key);
+  const out = document.getElementById("gOut"), btn = document.getElementById("gBtn");
+  btn.disabled = true;
+  out.innerHTML = `<p><span class="spin"></span> AI đang soạn ${n} câu hỏi...</p>`;
+
+  const prompt = `Bạn là trợ lý soạn câu hỏi trắc nghiệm cho giáo viên tiểu học Việt Nam.
+Dựa vào ý tưởng sau, hãy tạo đúng ${n} câu hỏi cho học sinh tiểu học (tiếng Việt đơn giản, mỗi câu có 1 đáp án đúng duy nhất).
+Ý tưởng: ${idea}
+Mỗi câu thuộc 1 trong 4 dạng (trộn đều):
+- "choice": trắc nghiệm 4 đáp án.
+- "truefalse": đúng/sai (options luôn ["Đúng","Sai"]).
+- "reorder": sắp xếp — options 4 mục theo ĐÚNG thứ tự, correct luôn 0.
+- "fillblank": điền từ — q chứa "...", options 1-3 đáp án chấp nhận, correct luôn 0.
+Với mỗi câu thêm "image_prompt" (tiếng Anh, ngắn) để vẽ ảnh KHÔNG có chữ.
+Trả về DUY NHẤT JSON hợp lệ, không lời dẫn:
+{"questions":[{"type":"choice","q":"...","options":["...","...","...","..."],"correct":2,"explain":"...","image_prompt":"..."}]}`;
+
+  try {
+    let j = null, lastErr = "";
+    const maxTok = Math.min(8000, parseInt(n) * 600);
+    for (let mi = 0; mi < GEMINI_MODELS.length; mi++) {
+      const model = GEMINI_MODELS[mi];
+      out.innerHTML = `<p><span class="spin"></span> AI đang soạn ${n} câu...<br><span class="note">(máy chủ ${mi+1}/${GEMINI_MODELS.length})</span></p>`;
+      try {
+        const ctl = new AbortController();
+        const tmr = setTimeout(() => ctl.abort(), 25000);
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: ctl.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, maxOutputTokens: maxTok }
+            })
+          }
+        );
+        clearTimeout(tmr);
+        const jj = await r.json();
+        if (!r.ok) throw new Error(jj.error?.message || ("Lỗi " + r.status));
+        j = jj; break;
+      } catch (e) {
+        lastErr = e.name === "AbortError" ? "Máy chủ AI phản hồi chậm" : e.message;
+      }
+    }
+    if (!j) throw new Error(lastErr || "AI đang bận, thử lại sau.");
+    let txt = j.candidates[0].content.parts.map(p => p.text || "").join("");
+    txt = txt.replace(/```json|```/g, "").trim();
+    const data = JSON.parse(txt);
+    const TYPES = ["choice","truefalse","reorder","fillblank"];
+    aiResult = (data.questions || []).map(x => {
+      const t = TYPES.includes(x.type) ? x.type : "choice";
+      let options;
+      if (t === "truefalse") options = ["Đúng","Sai"];
+      else if (t === "fillblank") options = Array.isArray(x.options) ? x.options.map(String).filter(o => o.trim()) : [];
+      else options = Array.isArray(x.options) ? x.options.map(String) : [];
+      return {
+        type: t, q: String(x.q || ""), options,
+        correct: t === "choice" ? Math.max(0, parseInt(x.correct) || 0) : 0,
+        explain: String(x.explain || ""), image_url: "",
+        image_prompt: String(x.image_prompt || ""), keep: true
+      };
+    }).filter(x => x.q && x.options.length > 0 && (x.type === "fillblank" || x.type === "truefalse" || (x.options.length === 4 && x.options.every(o => o.trim()))));
+    if (!aiResult.length) throw new Error("AI không trả về câu hỏi nào.");
+    SFX.correct(); aiPreview();
+  } catch (e) {
+    out.innerHTML = `<div class="cfgwarn">⚠️ ${esc(e.message)}<br><span class="note">Kiểm tra API key và mạng.</span></div>`;
+  }
+  btn.disabled = false;
+}
+
+function aiPreview() {
+  const out = document.getElementById("gOut");
+  const rows = aiResult.map((q, i) => `
+    <label>
+      <input type="checkbox" ${q.keep?"checked":""} onchange="aiResult[${i}].keep=this.checked" style="width:18px;height:18px;margin-right:8px">
+      ${typeTag(q)} <b>Câu ${i+1}:</b> ${esc(q.q)}<br>
+      <span class="note">${q.options.map((o,j) => `${j===q.correct?"✅":"▫️"} ${esc(o)}`).join(" · ")}</span>
+      ${q.image_prompt ? `<span class="imgprompt">🎨 ${esc(q.image_prompt)}</span>` : ""}
+    </label>`).join("");
+  const setOpts = bank.filter(s => !isDefaultSet(s)).map(s => `<option value="${s.id}">${esc(s.set_name)}</option>`).join("");
+  out.innerHTML = `
+    <div class="aiprev">
+      <h3>Duyệt câu hỏi (${aiResult.length})</h3>
+      ${rows}
+      <label style="margin-top:12px">Lưu vào bộ đề</label>
+      <select id="aiSet">${setOpts}<option value="__new">➕ Tạo bộ đề mới...</option></select>
+      <input type="text" id="aiNewName" placeholder="Tên bộ đề mới" style="display:none;margin-top:8px">
+      <br><br>
+      <button class="btn big green" onclick="aiSave()">Lưu các câu đã chọn</button>
+    </div>`;
+  document.getElementById("aiSet").onchange = e => {
+    document.getElementById("aiNewName").style.display = e.target.value === "__new" ? "block" : "none";
+  };
+}
+
+async function aiSave() {
+  if (bankReadOnly) { alert("Chạy migration SQL trước."); return; }
+  const kept = aiResult.filter(q => q.keep).map(({ keep, image_prompt, ...rest }) => rest);
+  if (!kept.length) { alert("Chọn ít nhất 1 câu."); return; }
+  let sid = document.getElementById("aiSet").value;
+  if (sid === "__new") {
+    const nm = document.getElementById("aiNewName").value.trim() || "Bộ đề AI " + new Date().toLocaleDateString("vi-VN");
+    const { data } = await sb.from("question_bank").insert({ set_name: nm, questions: [] }).select().single();
+    if (!data) { alert("Không lưu được."); return; }
+    bank.push(data); sid = data.id;
+  }
+  const s = bank.find(x => x.id === sid);
+  if (isDefaultSet(s)) { alert("Không lưu vào bộ đề mặc định."); return; }
+  s.questions = s.questions.concat(kept);
+  if (!String(sid).startsWith("fb")) await sb.from("question_bank").update({ questions: s.questions }).eq("id", sid);
+  SFX.fanfare(); fireworks(4);
+  document.getElementById("gOut").innerHTML = `<div class="aimsg">✅ Đã lưu ${kept.length} câu vào <b>${esc(s.set_name)}</b>.</div>`;
+}
+
+/* ================= TEACHER ROOM CONTROL ================= */
+async function tCreateRoom() {
+  SFX.click();
+  const sid = document.getElementById("setSel").value;
+  const s = bank.find(x => x.id === sid);
+  if (!s || !s.questions.length) { alert("Bộ đề chưa có câu hỏi."); return; }
+  unsubAll();
+  let pin = "";
+  for (let t = 0; t < 20; t++) {
+    pin = String(Math.floor(100000 + Math.random() * 900000));
+    const { data } = await sb.from("rooms").select("id").eq("pin", pin).limit(1);
+    if (!data || !data.length) break;
+  }
+  const theme = canAdventure() ? roomTheme : "classic";
+  let res = await sb.from("rooms").insert({ pin, phase: "lobby", current: 0, question_set: s.questions, theme }).select().single();
+  if (res.error && /theme/i.test(res.error.message || "")) {
+    res = await sb.from("rooms").insert({ pin, phase: "lobby", current: 0, question_set: s.questions }).select().single();
+  }
+  const { data, error } = res;
+  if (error) { alert("Lỗi tạo phòng: " + error.message); return; }
+  room = data; players = []; answers = []; lockedOnce = false; roomAnsAll = []; streakMap = {};
+  SFX.join(); tLobby();
+}
+
+function showTeacherRejoin() {
+  app.innerHTML = `
+  <div class="card">
+    <h2>Vào lại phòng cũ</h2>
+    <input type="text" id="rePin" inputmode="numeric" placeholder="Nhập PIN" maxlength="6">
+    <br><br>
+    <button class="btn big green" onclick="tRejoin()">Vào phòng</button>
+    <button class="btn ghost" onclick="showTeacher()">← Quay lại</button>
+  </div>`;
+}
+
+async function tRejoin() {
+  const pin = document.getElementById("rePin").value.trim();
+  const { data } = await sb.from("rooms").select("*").eq("pin", pin).order("created_at", { ascending: false }).limit(1);
+  if (!data || !data.length) { alert("Không tìm thấy phòng."); return; }
+  unsubAll(); room = data[0]; lockedOnce = false; roomAnsAll = []; streakMap = {};
+  const { data: pl } = await sb.from("players").select("*").eq("room_id", room.id).order("created_at");
+  players = pl || [];
+  if (room.phase === "lobby") tLobby();
+  else if (room.phase === "question") tQuestion();
+  else if (room.phase === "reveal") tShowReveal();
+  else tPodium();
+}
+
+function tLobby() {
+  LobbyMusic.start(); applyTheme();
+  const adv = document.body.dataset.theme === "adventure";
+  app.innerHTML = `
+  <div class="card">
+    <h2>${adv ? "🗺️ Mật mã lên đường" : "Mã PIN phòng"}</h2>
+    <div class="pin-box"><div class="pin">${room.pin}</div></div>
+    <p class="sub">${adv ? "Học sinh nhập mật mã này để gia nhập biệt đội" : "Học sinh mở cùng địa chỉ rồi nhập PIN"}</p>
+    <h3>Đã vào: <span id="pcount">0</span> bạn</h3>
+    <div class="plist" id="plist"></div>
+    <br>
+    <button class="btn big green" id="startBtn" onclick="tStartQ()" disabled>▶ Bắt đầu (chờ học sinh...)</button><br>
+    <button class="btn small ghost" id="lobbyMusicBtn" onclick="toggleLobbyMusic()">🎵 Nhạc chờ: Bật</button>
+  </div>`;
+  const render = async () => {
+    const { data } = await sb.from("players").select("*").eq("room_id", room.id).order("created_at");
+    players = data || [];
+    const pl = document.getElementById("plist");
+    if (pl) pl.innerHTML = players.map(p => `<span class="pname">${esc(p.name)}</span>`).join("");
+    const pc = document.getElementById("pcount");
+    if (pc) pc.textContent = players.length;
+    const b = document.getElementById("startBtn");
+    if (b) {
+      b.disabled = !players.length;
+      b.innerHTML = players.length ? "▶ Bắt đầu!" : "▶ Bắt đầu (chờ học sinh...)";
+    }
+  };
+  render();
+  channel2 = sb.channel("tpl-" + room.id)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "players", filter: "room_id=eq." + room.id }, () => { render(); SFX.join(); })
+    .subscribe();
+}
+
+async function tStartQ() {
+  SFX.click(); unsubAll(); LobbyMusic.stop();
+  await sb.from("rooms").update({ phase: "question", current: 0, question_started_at: new Date().toISOString() }).eq("id", room.id);
+  room.phase = "question"; room.current = 0; room.question_started_at = new Date().toISOString();
+  tQuestion();
+}
+
+function tQuestion() {
+  const q = qNow(); if (!q) return; applyTheme();
+  const idx = room.current, total = room.question_set.length;
+  const letters = ["A","B","C","D"], order = optOrder(q);
+  const typeNote = q.type === "truefalse" ? "· Đúng/Sai" : q.type === "reorder" ? "· Sắp xếp" : q.type === "fillblank" ? "· Điền từ" : "";
+  const optsHtml = q.type === "fillblank"
+    ? `<p class="sub">Học sinh điền đáp án trên máy của mình</p>`
+    : `<div class="opts">${order.map((oi, d) => `<div class="opt dim">${letters[d]||"•"}. ${esc(q.options[oi])}</div>`).join("")}</div>`;
+  app.innerHTML = `
+  <div class="card">
+    <div class="note">Câu ${idx+1}/${total} ${typeNote}</div>
+    <div class="timer" id="tmr">${QUESTION_TIME}</div>
+    <div class="qtext">${esc(q.q)}</div>${qImg(q)}
+    ${optsHtml}
+    <p class="sub">Đã trả lời: <b id="acount">0</b> / ${players.length}</p>
+    <button class="btn big red" onclick="tLock()">⏹ Chốt đáp án</button>
+  </div>`;
+  lastTick = 99; locking = false;
+  if (timerInt) clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    const r = remain();
+    const e = document.getElementById("tmr");
+    if (e) { e.textContent = r; e.classList.toggle("warn", r <= 5); }
+    if (r <= 5 && r !== lastTick && r > 0) { lastTick = r; SFX.urgent(); }
+    if (r <= 0 && !locking) { locking = true; tLock(); }
+  }, 250);
+  channel2 = sb.channel("tans-" + room.id + "-" + idx)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "answers", filter: "room_id=eq." + room.id }, async () => {
+      const { count } = await sb.from("answers").select("id", { count: "exact", head: true }).eq("room_id", room.id).eq("q_index", idx);
+      const e = document.getElementById("acount");
+      if (e) e.textContent = count || 0;
+    }).subscribe();
+}
+
+async function tLock() {
+  if (lockedOnce) return; lockedOnce = true;
+  if (timerInt) { clearInterval(timerInt); timerInt = null; }
+  SFX.click();
+  const idx = room.current, q = qNow();
+  const { data: ans } = await sb.from("answers").select("*").eq("room_id", room.id).eq("q_index", idx);
+  answers = ans || [];
+  try {
+    const r = await sb.from("answers").select("player_id,q_index,is_correct").eq("room_id", room.id);
+    roomAnsAll = r.data || [];
+  } catch (e) {}
+  const pmap = {}; players.forEach(p => pmap[p.id] = p);
+  streakMap = {};
+  for (const p of players) streakMap[p.id] = streakOf(roomAnsAll.filter(x => x.player_id === p.id), idx);
+  for (const a of answers) {
+    if (!pmap[a.player_id]) continue;
+    const bonus = Math.max(0, Math.round(50 * (1 - a.ms / (QUESTION_TIME * 1000))));
+    const combo = comboBonus(streakMap[a.player_id] || 0);
+    if (q.type === "reorder") {
+      const frac = Math.max(0, Math.min(1, (a.option_index || 0) / q.options.length));
+      if (frac > 0) pmap[a.player_id].score += Math.round(100 * frac) + (a.is_correct ? bonus + combo : 0);
+    } else if (a.is_correct) {
+      pmap[a.player_id].score += 100 + bonus + combo;
+    }
+  }
+  for (const p of players) await sb.from("players").update({ score: p.score }).eq("id", p.id);
+  await sb.from("rooms").update({ phase: "reveal" }).eq("id", room.id);
+  room.phase = "reveal";
+  tShowReveal();
+}
+
+function tWhoPicked(oi, kind) {
+  const q = qNow(); if (!q) return;
+  const box = document.getElementById("whoBox"); if (!box) return;
+  const nm = a => { const p = players.find(x => x.id === a.player_id); return p ? p.name : "?"; };
+  let title = "", rows = [], good = false;
+  if (kind === "choice") {
+    const order = optOrder(q), letters = ["A","B","C","D"];
+    const disp = letters[order.indexOf(oi)] || "•";
+    good = (oi === q.correct);
+    title = `${good?"✅":"❌"} Đáp án ${disp}: ${esc(q.options[oi])} — <b>${answers.filter(a => a.option_index === oi).length}</b> bạn`;
+    rows = answers.filter(a => a.option_index === oi).map(a => `<span class="pname">${esc(nm(a))}</span>`);
+  } else if (kind === "rofull") {
+    good = true;
+    const list = answers.filter(a => a.is_correct);
+    title = `🎯 Xếp đúng hoàn toàn — <b>${list.length}</b> bạn`;
+    rows = list.map(a => `<span class="pname">${esc(nm(a))}</span>`);
+  } else if (kind === "ropart") {
+    const list = answers.filter(a => !a.is_correct);
+    title = `💪 Đúng một phần — <b>${list.length}</b> bạn`;
+    rows = list.map(a => `<span class="pname">${esc(nm(a))} (${a.option_index||0}/${q.options.length})</span>`);
+  } else if (kind === "blfull") {
+    good = true;
+    const list = answers.filter(a => a.is_correct);
+    title = `🎯 Trả lời đúng — <b>${list.length}</b> bạn`;
+    rows = list.map(a => `<span class="pname">${esc(nm(a))}</span>`);
+  } else if (kind === "blwrong") {
+    const list = answers.filter(a => !a.is_correct);
+    title = `😅 Chưa đúng — <b>${list.length}</b> bạn`;
+    rows = list.map(a => `<span class="pname">${esc(nm(a))}</span>`);
+  }
+  box.innerHTML = `<div class="whobox ${good?"ok":"bad"}"><b>${title}</b><div class="plist">${rows.join("") || '<span class="note">Không có.</span>'}</div></div>`;
+  box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  SFX.click();
+}
+
+async function tShowReveal() {
+  const q = qNow(); if (!q) return; applyTheme();
+  await ensureAnsAll();
+  const idx = room.current;
+  try {
+    const { data } = await sb.from("answers").select("*").eq("room_id", room.id).eq("q_index", idx);
+    answers = data || [];
+  } catch (e) {}
+  const total = room.question_set.length;
+  const letters = ["A","B","C","D"], last = idx >= total - 1, order = optOrder(q);
+  let resultHtml = "";
+  if (q.type === "reorder") {
+    const full = answers.filter(a => a.is_correct).length;
+    const part = answers.length - full;
+    resultHtml = `
+      <div class="qtext" style="font-size:1.2rem">Thứ tự đúng:<br><b>${q.options.map((o,i) => `${i+1}. ${esc(o)}`).join("<br>")}</b></div>
+      <h3>Kết quả</h3>
+      <div class="bar right" onclick="tWhoPicked(0,'rofull')" style="cursor:pointer">
+        <div style="width:${answers.length ? Math.max(8, Math.round(full/answers.length*100)) : 8}%">🎯 Đúng hoàn toàn: ${full}/${answers.length}</div>
+      </div>
+      ${part ? `<p class="note" onclick="tWhoPicked(0,'ropart')" style="cursor:pointer;text-decoration:underline">💪 ${part} bạn đúng một phần — bấm xem tên</p>` : ""}
+      <div id="whoBox"></div>`;
+  } else if (q.type === "fillblank") {
+    const full = answers.filter(a => a.is_correct).length;
+    const wrong = answers.length - full;
+    resultHtml = `
+      <div class="qtext" style="font-size:1.2rem">Đáp án chấp nhận: <b>${q.options.map(o => esc(o)).join(" / ")}</b></div>
+      <h3>Kết quả</h3>
+      <div class="bar right" onclick="tWhoPicked(0,'blfull')" style="cursor:pointer">
+        <div style="width:${answers.length ? Math.max(8, Math.round(full/answers.length*100)) : 8}%">🎯 Đúng: ${full}/${answers.length}</div>
+      </div>
+      ${wrong ? `<p class="note" onclick="tWhoPicked(0,'blwrong')" style="cursor:pointer;text-decoration:underline">😅 ${wrong} bạn chưa đúng — bấm xem tên</p>` : ""}
+      <div id="whoBox"></div>`;
+  } else {
+    const counts = q.options.map((_, i) => answers.filter(a => a.option_index === i).length);
+    const maxC = Math.max(1, ...counts);
+    resultHtml = `
+      <div class="opts">${order.map((oi, d) => `
+        <div class="opt ${oi===q.correct?"correct":""}" onclick="tWhoPicked(${oi},'choice')" style="cursor:pointer">
+          ${oi===q.correct?"✅":"▫️"} ${letters[d]||"•"}. ${esc(q.options[oi])}
+        </div>`).join("")}</div>
+      <h3>Cả lớp đã chọn</h3>
+      ${order.map((oi, d) => `
+        <div class="bar ${oi===q.correct?"right":""}" onclick="tWhoPicked(${oi},'choice')" style="cursor:pointer">
+          <div style="width:${Math.max(8, Math.round(counts[oi]/maxC*100))}%">${letters[d]||"•"}: ${counts[oi]}</div>
+        </div>`).join("")}
+      <p class="note">Bấm vào đáp án để xem tên</p>
+      <div id="whoBox"></div>`;
+  }
+  app.innerHTML = `
+  <div class="card">
+    <div class="note">Câu ${idx+1}/${total} — Kết quả (${answers.length} bạn)</div>
+    <div class="qtext">${esc(q.q)}</div>${qImg(q)}
+    ${resultHtml}
+    ${q.explain ? `<div class="explain">💡 ${esc(q.explain)}</div>` : ""}
+    <h3>Bảng điểm</h3>
+    <div id="scoreWrap">${scoreTable()}</div>
+    <button class="btn big green" onclick="tNext()">${last ? "🏁 Xem vinh danh" : "Câu tiếp theo →"}</button>
+  </div>`;
+  try { channel3 && channel3.unsubscribe(); } catch (e) {}
+  channel3 = sb.channel("tspin-" + room.id + "-" + idx)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "players", filter: "room_id=eq." + room.id }, payload => {
+      const p = players.find(x => x.id === payload.new.id); if (!p) return;
+      const delta = payload.new.score - p.score; p.score = payload.new.score;
+      if (delta > 0) {
+        const w = document.getElementById("scoreWrap");
+        if (w) w.innerHTML = scoreTable();
+        toast(`🎡 <b>${esc(p.name)}</b> quay may mắn +${delta} điểm!`);
+        SFX.fanfare();
+      }
+    }).subscribe();
+}
+
+function scoreTable() {
+  const s = [...players].sort((a, b) => b.score - a.score);
+  if (!s.length) return `<p class="note">Chưa có học sinh.</p>`;
+  return `<table class="score">${s.map((p, i) => {
+    const st = streakMap[p.id] || 0;
+    return `<tr><td>${i+1}</td><td style="text-align:left"><b>${esc(p.name)}</b>${st>=2?` <span class="streak">🔥x${st}</span>`:""}</td><td><b>${p.score}</b></td></tr>`;
+  }).join("")}</table>`;
+}
+
+async function tNext() {
+  SFX.click(); lockedOnce = false;
+  const total = room.question_set.length;
+  if (room.current >= total - 1) {
+    await sb.from("rooms").update({ phase: "podium" }).eq("id", room.id);
+    room.phase = "podium"; tPodium();
+  } else {
+    const nx = room.current + 1;
+    unsubAll();
+    await sb.from("rooms").update({ phase: "question", current: nx, question_started_at: new Date().toISOString() }).eq("id", room.id);
+    room.current = nx; room.phase = "question"; room.question_started_at = new Date().toISOString();
+    tQuestion();
+  }
+}
+
+function tPodium() {
+  unsubAll(); applyTheme();
+  const adv = document.body.dataset.theme === "adventure";
+  const s = [...players].sort((a, b) => b.score - a.score);
+  const step = (p, cls, md) => p
+    ? `<div class="step ${cls}"><span class="medal">${md}</span><span class="nm">${esc(p.name)}</span><span class="sc">${p.score} đ</span></div>`
+    : `<div class="step ${cls}"><span class="medal">—</span></div>`;
+  app.innerHTML = `
+  <div class="card">
+    <h1>${adv ? "🗺️ Hoàn thành chuyến phiêu lưu!" : "🏆 Vinh danh"}</h1>
+    <div class="podium">${step(s[1],"s2","🥈")}${step(s[0],"s1","🥇")}${step(s[2],"s3","🥉")}</div>
+    <h3>Cả lớp</h3>${scoreTable()}
+    <button class="btn big" onclick="showTeacher()">Về trang giáo viên</button>
+  </div>`;
+  SFX.victory(); fireworks(8);
+}
+
+/* ================= STUDENT ================= */
+function showStudentJoin() {
+  if (!sbInit()) { showSetup(); return; }
+  mode = "student"; unsubAll();
+  app.innerHTML = `
+  <div class="card">
+    <h2>Học sinh vào phòng</h2>
+    <input type="text" id="jPin" inputmode="numeric" placeholder="Mã PIN" maxlength="6">
+    <input type="text" id="jName" placeholder="Tên của em" maxlength="24">
+    <br><br>
+    <button class="btn big orange" onclick="sJoin()">Vào phòng</button>
+    <p class="note" style="margin-top:14px">Hỏi giáo viên mã PIN đang hiện trên màn hình lớp.</p>
+  </div>`;
+}
+
+async function sJoin() {
+  const pin = document.getElementById("jPin").value.trim();
+  const name = document.getElementById("jName").value.trim();
+  if (pin.length < 4) { alert("Nhập mã PIN."); return; }
+  if (!name) { alert("Nhập tên của em."); return; }
+  SFX.click();
+  const { data } = await sb.from("rooms").select("*").eq("pin", pin).order("created_at", { ascending: false }).limit(1);
+  if (!data || !data.length) { alert("Không tìm thấy phòng. Kiểm tra lại PIN."); return; }
+  room = data[0];
+  if (room.phase !== "lobby") { alert("Phòng đã bắt đầu. Chờ ván sau nhé!"); return; }
+  const { data: p, error } = await sb.from("players").insert({ room_id: room.id, name }).select().single();
+  if (error) { alert("Lỗi vào phòng: " + error.message); return; }
+  myPlayer = p; sCur = -1; myAnswer = null; SFX.join();
+  subRoomStudent(); sLobby();
+}
+
+function subRoomStudent() {
+  channel = sb.channel("sroom-" + room.id)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rooms", filter: "id=eq." + room.id }, payload => {
+      room = payload.new; onRoomChange();
+    }).subscribe();
+  setTimeout(async () => {
+    const { data } = await sb.from("rooms").select("*").eq("id", room.id).single();
+    if (data && (data.phase !== room.phase || data.current !== room.current)) { room = data; onRoomChange(); }
+  }, 2500);
+}
+
+function onRoomChange() {
+  if (room.phase === "question") {
+    if (sCur !== room.current) { sCur = room.current; myAnswer = null; sQuestion(); }
+  } else if (room.phase === "reveal") sReveal();
+  else if (room.phase === "podium") sPodium();
+}
+
+function sLobby() {
+  applyTheme();
+  const adv = document.body.dataset.theme === "adventure";
+  app.innerHTML = `
+  <div class="card">
+    <h2>${adv ? `🗺️ Sẵn sàng, <b>${esc(myPlayer.name)}</b>!` : `Chào <b>${esc(myPlayer.name)}</b>!`}</h2>
+    <p class="sub">${adv ? "Em đã gia nhập biệt đội. Chờ giáo viên bắt đầu..." : "Em đã vào phòng. Chờ giáo viên bắt đầu..."}</p>
+    <span class="spin"></span>
+  </div>`;
+}
+
+/* Spin helpers */
+function spinMilestoneKey() { return "spinM_" + (room ? room.id : ""); }
+function spinLastMilestone() { try { return parseInt(localStorage.getItem(spinMilestoneKey()) || "0") || 0; } catch (e) { return 0; } }
+function spinSetMilestone(m) { try { localStorage.setItem(spinMilestoneKey(), String(m)); } catch (e) {} }
+
+function drawWheel(cv, ang) {
+  const ctx = cv.getContext("2d"), W = cv.width, C = W / 2, R = C - 10, n = SPIN_SEGS.length;
+  ctx.clearRect(0, 0, W, W);
+  ctx.save(); ctx.translate(C, C); ctx.rotate(ang);
+  const cols = ["#fbbf24", "#a78bfa"];
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a1); ctx.closePath();
+    ctx.fillStyle = cols[i % 2]; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.save(); ctx.rotate((a0 + a1) / 2); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillStyle = i % 2 ? "#fff" : "#78350f"; ctx.font = "900 " + Math.round(W / 13) + "px sans-serif";
+    ctx.fillText("+" + SPIN_SEGS[i], R - 14, 0); ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(C, C, W * 0.1, 0, 7); ctx.fillStyle = "#92400e"; ctx.fill();
+  ctx.beginPath(); ctx.arc(C, C, W * 0.06, 0, 7); ctx.fillStyle = "#fbbf24"; ctx.fill();
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath(); ctx.moveTo(C - 12, 6); ctx.lineTo(C + 12, 6); ctx.lineTo(C, 28); ctx.closePath(); ctx.fill();
+}
+
+function sDoSpin() {
+  if (spinBusy) return;
+  const cv = document.getElementById("wheelCv"); if (!cv) return;
+  spinBusy = true;
+  const btn = document.getElementById("spinBtn"); if (btn) btn.disabled = true;
+  const n = SPIN_SEGS.length;
+  const seg = Math.floor(Math.random() * n);
+  const jitter = Math.random() * 24 - 12;
+  const target = ((((270 - (seg * 360 / n + 360 / n / 2 + jitter)) % 360) + 360) % 360) * Math.PI / 180;
+  const ang = parseFloat(cv.dataset.ang || "0");
+  const norm = (((target - ang) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const final = ang + Math.PI * 2 * 6 + norm;
+  const t0 = performance.now(), DUR = 4200;
+  let lastT = 0;
+  (function frame(t) {
+    const p = Math.min(1, (t - t0) / DUR), e = 1 - Math.pow(1 - p, 5);
+    drawWheel(cv, ang + (final - ang) * e);
+    if (t - lastT > 220) { lastT = t; SFX.tick(); }
+    if (p < 1) requestAnimationFrame(frame);
+    else { cv.dataset.ang = String(final % (Math.PI * 2)); sSpinDone(SPIN_SEGS[seg]); }
+  })(t0);
+}
+
+async function sSpinDone(prize) {
+  spinBusy = false;
+  const panel = document.getElementById("spinPanel"); if (!panel) return;
+  let newScore = null;
+  try {
+    const { data } = await sb.from("players").select("score").eq("id", myPlayer.id).single();
+    newScore = (data ? data.score : 0) + prize;
+    await sb.from("players").update({ score: newScore }).eq("id", myPlayer.id);
+  } catch (e) {}
+  spinSetMilestone(Math.floor(sSpinCorrect / SPIN_EVERY));
+  SFX.fanfare(); boom(innerWidth / 2, innerHeight / 3, 55);
+  panel.innerHTML = `
+    <div class="spinwin">🎉 Chúc mừng!<br><span>+${prize} điểm</span></div>
+    <p class="sub">${newScore !== null ? `Tổng điểm: <b>${newScore}</b>` : "Điểm đã được cộng!"}</p>`;
+}
+
+/* Reorder helpers */
+function sRenderReorder() {
+  const q = qNow(); if (!q) return;
+  const box = document.getElementById("sopts"); if (!box) return;
+  box.innerHTML = sOrder.map((oi, r) => `
+    <div class="sreorow" data-r="${r}" draggable="true">
+      <span class="sreonum">${r+1}</span>
+      <span class="sreotxt">${esc(q.options[oi])}</span>
+      <span class="sreobtns">
+        <button class="btn small" onclick="sReoMove(${r},-1)" ${r===0?"disabled":""}>▲</button>
+        <button class="btn small" onclick="sReoMove(${r},1)" ${r===sOrder.length-1?"disabled":""}>▼</button>
+      </span>
+    </div>`).join("");
+  box.querySelectorAll(".sreorow").forEach(row => {
+    row.addEventListener("dragstart", e => {
+      reoDragOi = sOrder[+row.dataset.r]; row.classList.add("drag");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", "x"); } catch (_) {}
+    });
+    row.addEventListener("dragend", () => { row.classList.remove("drag"); reoDragOi = null; });
+    row.addEventListener("dragover", e => { e.preventDefault(); row.classList.add("over"); });
+    row.addEventListener("dragleave", () => row.classList.remove("over"));
+    row.addEventListener("drop", e => { e.preventDefault(); row.classList.remove("over"); sReoDrop(+row.dataset.r); });
+    row.addEventListener("touchstart", e => sReoTS(e, row), { passive: true });
+    row.addEventListener("touchmove", e => sReoTM(e, row), { passive: false });
+    row.addEventListener("touchend", () => sReoTE());
+    row.addEventListener("touchcancel", () => sReoTE());
+  });
+}
+
+function sReoMove(r, dir) {
+  if (myAnswer !== null) return;
+  const n = r + dir; if (n < 0 || n >= sOrder.length) return;
+  [sOrder[r], sOrder[n]] = [sOrder[n], sOrder[r]];
+  SFX.click(); sRenderReorder();
+}
+
+function sReoDrop(targetR) {
+  if (myAnswer !== null || reoDragOi === null || reoDragOi === undefined) return;
+  const from = sOrder.indexOf(reoDragOi);
+  sOrder.splice(from, 1);
+  let t = targetR; if (from < targetR) t = targetR - 1;
+  sOrder.splice(Math.max(0, Math.min(sOrder.length, t)), 0, reoDragOi);
+  reoDragOi = null; SFX.click(); sRenderReorder();
+}
+
+function sReoTS(e, row) {
+  if (myAnswer !== null || e.target.closest("button")) return;
+  reoDrag = { r: +row.dataset.r, y0: e.touches[0].clientY, row, ni: null };
+  row.classList.add("drag");
+}
+
+function sReoTM(e, row) {
+  if (!reoDrag) return;
+  e.preventDefault();
+  const dy = e.touches[0].clientY - reoDrag.y0;
+  reoDrag.row.style.transform = `translateY(${dy}px)`;
+  reoDrag.row.style.zIndex = "5";
+  const box = document.getElementById("sopts");
+  const rows = [...box.querySelectorAll(".sreorow")];
+  const h = reoDrag.row.offsetHeight || 56;
+  let ni = Math.round(reoDrag.r + dy / h);
+  ni = Math.max(0, Math.min(rows.length - 1, ni));
+  rows.forEach(x => x.classList.remove("over"));
+  if (rows[ni] && rows[ni] !== reoDrag.row) rows[ni].classList.add("over");
+  reoDrag.ni = ni;
+}
+
+function sReoTE() {
+  if (!reoDrag) return;
+  const { r, ni } = reoDrag;
+  reoDrag = null;
+  if (ni !== null && ni !== undefined && ni !== r) {
+    const [oi] = sOrder.splice(r, 1);
+    sOrder.splice(ni, 0, oi);
+    SFX.click();
+  }
+  sRenderReorder();
+}
+
+function sResetOrder() {
+  if (myAnswer !== null) return;
+  sOrder = [...sOrd]; SFX.click(); sRenderReorder();
+}
+
+async function sSubmitOrder(auto) {
+  if (myAnswer !== null) return;
+  const q = qNow(); if (!q) return;
+  let cc = 0;
+  sOrder.forEach((oi, pos) => { if (oi === pos) cc++; });
+  const ok = cc === q.options.length;
+  myAnswer = { t: "reorder", cc };
+  const ms = Math.max(0, Date.now() - new Date(room.question_started_at).getTime());
+  try {
+    await sb.from("answers").insert({ room_id: room.id, player_id: myPlayer.id, q_index: room.current, option_index: cc, is_correct: ok, ms });
+  } catch (e) {}
+  if (timerInt) clearInterval(timerInt);
+  app.innerHTML = `<div class="card"><h2>✅ Đã trả lời!</h2><p class="sub">Chờ giáo viên chốt đáp án...</p><span class="spin"></span></div>`;
+}
+
+async function sSubmitBlank(auto) {
+  if (myAnswer !== null) return;
+  const q = qNow(); if (!q) return;
+  const el = document.getElementById("blankIn");
+  const val = el ? el.value : "";
+  if (!auto && !val.trim()) { alert("Điền đáp án trước nhé!"); return; }
+  const ok = blankCorrect(q, val);
+  myAnswer = { t: "blank", ok };
+  const ms = Math.max(0, Date.now() - new Date(room.question_started_at).getTime());
+  try {
+    await sb.from("answers").insert({ room_id: room.id, player_id: myPlayer.id, q_index: room.current, option_index: -1, is_correct: ok, ms });
+  } catch (e) {}
+  if (timerInt) clearInterval(timerInt);
+  app.innerHTML = `<div class="card"><h2>✅ Đã trả lời!</h2><p class="sub">Chờ giáo viên chốt đáp án...</p><span class="spin"></span></div>`;
+}
+
+function sTimeUp() {
+  const q = qNow(); if (!q || myAnswer !== null) return;
+  if (q.type === "reorder") sSubmitOrder(true);
+  else if (q.type === "fillblank") sSubmitBlank(true);
+}
+
+function sQuestion() {
+  const q = qNow(); if (!q) return; applyTheme();
+  sOrd = []; sOrder = [];
+  const letters = ["A","B","C","D"], order = optOrder(q);
+  let body = "";
+  if (q.type === "reorder") {
+    sOrd = [...order]; sOrder = [...order];
+    body = `
+      <div class="note">Kéo thả hoặc dùng ▲ ▼ để xếp đúng thứ tự</div>
+      <div class="opts" id="sopts"></div>
+      <button class="btn small ghost" onclick="sResetOrder()">Xếp lại</button>
+      <button class="btn big green" onclick="sSubmitOrder(false)">Xong</button>`;
+  } else if (q.type === "fillblank") {
+    body = `
+      <div class="note">Điền từ còn thiếu rồi bấm Trả lời</div>
+      <input type="text" id="blankIn" placeholder="Đáp án..." autocomplete="off" style="font-size:1.2rem;text-align:center">
+      <br><br>
+      <button class="btn big green" onclick="sSubmitBlank(false)">Trả lời</button>`;
+  } else {
+    body = `<div class="opts" id="sopts">${order.map((oi, d) =>
+      `<div class="opt" onclick="sAnswer(${d})">${letters[d]||"•"}. ${esc(q.options[oi])}</div>`
+    ).join("")}</div>`;
+  }
+  app.innerHTML = `
+  <div class="card">
+    <div class="note">Câu ${room.current+1}/${room.question_set.length} ${typeTag(q)}</div>
+    <div class="timer" id="tmr">${QUESTION_TIME}</div>
+    <div class="qtext">${esc(q.q)}</div>${qImg(q)}
+    ${body}
+  </div>`;
+  if (q.type === "reorder") sRenderReorder();
+  if (timerInt) clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    const r = remain();
+    const e = document.getElementById("tmr");
+    if (e) { e.textContent = r; e.classList.toggle("warn", r <= 5); }
+    if (r <= 0) { clearInterval(timerInt); sTimeUp(); }
+  }, 250);
+}
+
+async function sAnswer(d) {
+  if (myAnswer !== null) return;
+  const q = qNow(); const order = optOrder(q); const i = order[d];
+  myAnswer = i; SFX.click();
+  document.querySelectorAll("#sopts .opt").forEach((el, j) => {
+    el.classList.toggle("picked", j === d);
+    el.style.pointerEvents = "none";
+  });
+  const ms = Math.max(0, Date.now() - new Date(room.question_started_at).getTime());
+  try {
+    await sb.from("answers").insert({
+      room_id: room.id, player_id: myPlayer.id, q_index: room.current,
+      option_index: i, is_correct: i === q.correct, ms
+    });
+  } catch (e) {}
+  if (timerInt) clearInterval(timerInt);
+  app.innerHTML = `<div class="card"><h2>✅ Đã trả lời!</h2><p class="sub">Chờ giáo viên chốt đáp án...</p><span class="spin"></span></div>`;
+}
+
+async function sReveal() {
+  if (timerInt) clearInterval(timerInt);
+  const q = qNow(); if (!q) return; applyTheme();
+  let ok = false, rightHtml = "";
+  if (q.type === "reorder") {
+    const cc = (myAnswer && myAnswer.t === "reorder") ? myAnswer.cc : 0;
+    ok = cc === q.options.length;
+    rightHtml = `Thứ tự đúng:<br><b>${q.options.map((o, i) => `${i+1}. ${esc(o)}`).join("<br>")}</b>` +
+      (myAnswer && !ok ? `<br><span class="note">Em đúng ${cc}/${q.options.length} vị trí</span>` : "");
+  } else if (q.type === "fillblank") {
+    ok = !!(myAnswer && myAnswer.t === "blank" && myAnswer.ok);
+    rightHtml = `Đáp án đúng: <b>${esc(q.options[0])}</b>`;
+  } else {
+    ok = myAnswer !== null && myAnswer === q.correct;
+    rightHtml = `Đáp án đúng: <b>${esc(q.options[q.correct])}</b>`;
+  }
+  const { data } = await sb.from("players").select("score").eq("id", myPlayer.id).single();
+  const sc = data ? data.score : 0;
+  const { data: all } = await sb.from("players").select("score").eq("room_id", room.id).order("score", { ascending: false });
+  const rank = (all || []).filter(p => p.score > sc).length + 1;
+  let myStreak = 0, myCorrect = 0;
+  try {
+    const { data: mine } = await sb.from("answers").select("q_index,is_correct").eq("player_id", myPlayer.id).order("q_index");
+    myStreak = streakOf(mine || [], room.current);
+    myCorrect = (mine || []).filter(r => r.is_correct).length;
+  } catch (e) {}
+  const comboHtml = myStreak >= 2
+    ? `<div class="combo">🔥 Combo x${myStreak}! <span>+${comboBonus(myStreak)} điểm thưởng</span></div>` : "";
+  const earnedSpin = Math.floor(myCorrect / SPIN_EVERY);
+  const canSpin = earnedSpin > spinLastMilestone() && myAnswer !== null;
+  if (canSpin) sSpinCorrect = myCorrect;
+  const spinHtml = canSpin ? `
+    <div class="spinpanel" id="spinPanel">
+      <h3>🎡 Vòng quay may mắn!</h3>
+      <p class="sub">Em đã đúng <b>${myCorrect}</b> câu — bấm nút giữa để quay!</p>
+      <div class="wheelwrap">
+        <canvas id="wheelCv" width="260" height="260" data-ang="0"></canvas>
+        <button class="wheelcenter" id="spinBtn" onclick="sDoSpin()">QUAY</button>
+      </div>
+    </div>` : "";
+  if (ok) { if (myStreak >= 3) SFX.fanfare(); else SFX.correct(); boom(innerWidth / 2, innerHeight / 3, 45); }
+  else SFX.wrong();
+  app.innerHTML = `
+  <div class="card">
+    <h2>${myAnswer === null ? "⏰ Hết giờ!" : ok ? "🎉 Đúng rồi!" : "😅 Chưa đúng"}</h2>
+    ${comboHtml}
+    <div class="qtext" style="font-size:1.15rem">${rightHtml}</div>
+    ${spinHtml}
+    ${qImg(q)}
+    ${q.explain ? `<div class="explain">💡 ${esc(q.explain)}</div>` : ""}
+    <p class="sub">Điểm: <b>${sc}</b> · Hạng: <b>${rank}</b></p>
+    <p class="note">Chờ câu tiếp theo...</p>
+  </div>`;
+  const wcv = document.getElementById("wheelCv");
+  if (wcv) drawWheel(wcv, 0);
+}
+
+function sPodium() {
+  applyTheme();
+  sb.from("players").select("*").eq("room_id", room.id).order("score", { ascending: false }).then(({ data }) => {
+    const all = data || [];
+    const me = all.find(p => p.id === myPlayer.id);
+    const rank = all.findIndex(p => p.id === myPlayer.id) + 1;
+    const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🎖️";
+    app.innerHTML = `
+    <div class="card">
+      <div style="font-size:3.5rem">${medal}</div>
+      <h2>${esc(myPlayer.name)} — hạng ${rank}</h2>
+      <p class="sub">Tổng điểm: <b>${me ? me.score : 0}</b></p>
+      <h3>Top 5</h3>
+      <table class="score">${all.slice(0, 5).map((p, i) =>
+        `<tr><td>${i+1}</td><td style="text-align:left"><b>${esc(p.name)}</b></td><td><b>${p.score}</b></td></tr>`
+      ).join("")}</table>
+      <button class="btn big green" onclick="goHome()">Chơi ván mới</button>
+    </div>`;
+    SFX.victory(); fireworks(6);
+  });
+}
+
+/* ================= SETUP SCREEN ================= */
+function showSetup() {
+  app.innerHTML = `
+  <div class="card">
+    <div class="home-hero">
+      <div class="logo">⚙️</div>
+      <h1>Cấu hình lần đầu</h1>
+      <p class="sub">QuizLive cần một project Supabase <b>mới</b> của bạn để chạy realtime.</p>
+    </div>
+    <div class="cfgwarn" style="border-color:var(--primary);color:var(--ink);background:rgba(91,124,250,.1)">
+      <b>Các bước nhanh (khoảng 5 phút):</b><br><br>
+      1. Vào <a href="https://supabase.com" target="_blank" rel="noopener" style="color:var(--primary)">supabase.com</a> → <b>New project</b><br>
+      2. Vào <b>Project Settings → API</b><br>
+      3. Copy <b>Project URL</b> và <b>anon public</b> key<br>
+      4. Mở file <code style="background:var(--bg2);padding:2px 6px;border-radius:6px">index.html</code>, tìm <code style="background:var(--bg2);padding:2px 6px;border-radius:6px">CONFIG</code> ở đầu script<br>
+      5. Dán URL và key vào 2 dòng:<br>
+      &nbsp;&nbsp;<code style="background:var(--bg2);padding:2px 6px;border-radius:6px;font-size:.85rem">SUPABASE_URL: "https://xxxx.supabase.co"</code><br>
+      &nbsp;&nbsp;<code style="background:var(--bg2);padding:2px 6px;border-radius:6px;font-size:.85rem">SUPABASE_ANON_KEY: "eyJhbGci..."</code><br>
+      6. Vào <b>SQL Editor</b> trên Supabase → chạy SQL bên dưới<br>
+      7. Lưu file và <b>tải lại trang</b>
+    </div>
+    <details class="aiguide" style="margin-top:16px;text-align:left">
+      <summary>📋 SQL Migration — bấm để xem &amp; copy</summary>
+      <p class="note" style="margin:8px 0">Copy toàn bộ → dán vào SQL Editor trên Supabase → Run.</p>
+      <textarea readonly style="min-height:260px;font-family:monospace;font-size:.78rem;width:100%;max-width:100%" id="sqlMig">-- QuizLive schema (chạy 1 lần trên project mới)
+create extension if not exists "pgcrypto";
+
+create table if not exists rooms (
+  id uuid primary key default gen_random_uuid(),
+  pin text not null,
+  phase text not null default 'lobby',
+  current int not null default 0,
+  question_set jsonb not null default '[]',
+  question_started_at timestamptz,
+  theme text default 'classic',
+  created_at timestamptz default now()
+);
+create index if not exists rooms_pin_idx on rooms(pin);
+
+create table if not exists players (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid references rooms(id) on delete cascade,
+  name text not null,
+  score int not null default 0,
+  created_at timestamptz default now()
+);
+create index if not exists players_room_idx on players(room_id);
+
+create table if not exists answers (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid references rooms(id) on delete cascade,
+  player_id uuid references players(id) on delete cascade,
+  q_index int not null,
+  option_index int not null default -1,
+  is_correct boolean not null default false,
+  ms int not null default 0,
+  created_at timestamptz default now()
+);
+create index if not exists answers_room_q_idx on answers(room_id, q_index);
+
+create table if not exists question_bank (
+  id uuid primary key default gen_random_uuid(),
+  set_name text not null,
+  questions jsonb not null default '[]',
+  created_at timestamptz default now()
+);
+
+create table if not exists licenses (
+  id uuid primary key default gen_random_uuid(),
+  username text unique not null,
+  pass_hash text not null,
+  plan text not null default 'trial',
+  expires_at timestamptz,
+  created_at timestamptz default now()
+);
+
+-- Bật Realtime (bỏ qua nếu đã thêm)
+do $$ begin
+  alter publication supabase_realtime add table rooms;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table players;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table answers;
+exception when duplicate_object then null; end $$;
+
+-- RLS (mở cho demo lớp học)
+alter table rooms enable row level security;
+alter table players enable row level security;
+alter table answers enable row level security;
+alter table question_bank enable row level security;
+alter table licenses enable row level security;
+
+drop policy if exists "rooms_all" on rooms;
+drop policy if exists "players_all" on players;
+drop policy if exists "answers_all" on answers;
+drop policy if exists "bank_all" on question_bank;
+drop policy if exists "licenses_select" on licenses;
+create policy "rooms_all" on rooms for all using (true) with check (true);
+create policy "players_all" on players for all using (true) with check (true);
+create policy "answers_all" on answers for all using (true) with check (true);
+create policy "bank_all" on question_bank for all using (true) with check (true);
+create policy "licenses_select" on licenses for select using (true);</textarea>
+      <br>
+      <button class="btn small" onclick="navigator.clipboard.writeText(document.getElementById('sqlMig').value);toast('✅ Đã copy SQL')">📋 Copy SQL</button>
+    </details>
+    <p class="note" style="margin-top:18px">Sau khi điền CONFIG và chạy SQL, tải lại trang.</p>
+    <div class="footer" style="margin-top:20px">
+      Phát triển bởi <b>Lê Hữu Trí</b><br>
+      <a href="https://www.facebook.com/share/1CK2zFdePv/?mibextid=wwXIfr" target="_blank" rel="noopener">📘 Facebook</a>
+      &nbsp;·&nbsp;
+      <a href="https://zalo.me/0389216492" target="_blank" rel="noopener">💬 Zalo: 0389216492</a>
+    </div>
+  </div>`;
+}
+
+/* ================= BOOT ================= */
+if (!isConfigured()) {
+  showSetup();
+} else {
+  sbInit();
+  showHome();
+}
+</script>
+</body>
+</html>
