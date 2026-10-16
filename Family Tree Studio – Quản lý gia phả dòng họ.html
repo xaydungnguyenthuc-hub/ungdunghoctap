@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Tree Studio – Quản lý gia phả dòng họ</title>
+<style>
+:root{--bg:#faf6ee;--sf:#fff;--tx:#2b2118;--mu:#7a6a58;--pr:#8b1e2d;--ln:#e3d7c3;--ac:#b8892b;--ok:#3f6b3a;--wr:#b25a00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1c1713;--sf:#2a231c;--tx:#f1e8da;--mu:#b5a590;--pr:#d4566a;--ln:#4a3f33;--ac:#d9aa4d}}
+:root[data-theme=dark]{--bg:#1c1713;--sf:#2a231c;--tx:#f1e8da;--mu:#b5a590;--pr:#d4566a;--ln:#4a3f33;--ac:#d9aa4d}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--pr);color:#fff;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;flex:1;min-width:180px}
+header input{padding:6px 10px;border-radius:6px;border:0;min-width:150px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:6px 10px;background:var(--sf);border-bottom:1px solid var(--ln)}
+nav button{white-space:nowrap;border:0;background:none;color:var(--tx);padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.on{background:var(--pr);color:#fff}
+main{flex:1;overflow:auto;padding:14px;position:relative}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:12px}
+.stat b{display:block;font-size:26px;color:var(--pr)}.stat span{color:var(--mu);font-size:13px}
+button.b{background:var(--pr);color:#fff;border:0;padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit}
+button.g{background:var(--sf);color:var(--tx);border:1px solid var(--ln);padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:520px}th,td{text-align:left;padding:7px;border-bottom:1px solid var(--ln)}th{color:var(--mu);font-weight:600}
+tr.cl{cursor:pointer}tr.cl:hover{background:var(--ln)}
+.tag{font-size:12px;padding:1px 7px;border-radius:9px;background:var(--ln)}
+.bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+#treeBox{height:calc(100% - 44px);min-height:360px;background:var(--sf);border:1px solid var(--ln);border-radius:10px;overflow:hidden;position:relative;display:flex}
+#svgw{flex:1;min-width:0}#svg{width:100%;height:100%;cursor:grab;touch-action:none}
+#side{width:260px;border-left:1px solid var(--ln);padding:12px;overflow:auto;display:none}
+#side.on{display:block}
+@media(max-width:700px){#side{position:absolute;right:0;top:0;bottom:0;background:var(--sf);box-shadow:-4px 0 12px #0004}}
+dialog{border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);max-width:440px;width:92%}
+dialog label{display:block;margin:7px 0 2px;font-size:13px;color:var(--mu)}
+dialog input,dialog select,dialog textarea{width:100%;padding:6px;border-radius:6px;border:1px solid var(--ln);background:var(--bg);color:var(--tx);font:inherit}
+.warn{border-left:4px solid var(--wr)}.err{border-left:4px solid var(--pr)}.ok{border-left:4px solid var(--ok)}
+.note{background:var(--ln);padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px}
+</style></head><body>
+<header><h1 id="ttl">🏮 Family Tree Studio</h1><input id="q" placeholder="Tìm thành viên…" list="dl"><datalist id="dl"></datalist>
+<button class="g" id="th" title="Giao diện sáng/tối">🌓</button></header>
+<nav id="nav"></nav><main id="main"></main>
+<dialog id="dlg"><form method="dialog" id="fm"></form></dialog>
+<script>
+const KEY='fts_v1';
+let keep=false,db,sel=null,view='dash',collapsed=new Set(),dir='V',T={x:20,y:20,k:1};
+const sample=()=>({fam:{name:'Họ Mẫu (dữ liệu minh họa)',origin:'',chief:''},branches:['Chi trưởng','Chi thứ'],sample:true,persons:[
+{id:'p1',name:'Mẫu Văn Tổ',g:'M',birth:'1880',death:'1950',branch:'Chi trưởng',father:'',mother:'',spouses:['p2'],note:'',ver:true},
+{id:'p2',name:'Trần Thị Bà',g:'F',birth:'1885',death:'1960',branch:'',father:'',mother:'',spouses:['p1'],note:'',ver:true},
+{id:'p3',name:'Mẫu Văn An',g:'M',birth:'1910',death:'1985',branch:'Chi trưởng',father:'p1',mother:'p2',spouses:['p5'],note:'',ver:true},
+{id:'p4',name:'Mẫu Văn Bình',g:'M',birth:'1915',death:'',branch:'Chi thứ',father:'p1',mother:'p2',spouses:[],note:'',ver:false},
+{id:'p5',name:'Lê Thị Cúc',g:'F',birth:'1914',death:'1990-03-12',branch:'',father:'',mother:'',spouses:['p3'],note:'',ver:true},
+{id:'p6',name:'Mẫu Văn Dũng',g:'M',birth:'1940',death:'',branch:'Chi trưởng',father:'p3',mother:'p5',spouses:[],note:'',ver:false},
+{id:'p7',name:'Mẫu Thị Em',g:'F',birth:'1944',death:'',branch:'Chi trưởng',father:'p3',mother:'p5',spouses:[],note:'',ver:false}]});
+function load(){try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!db||!db.persons)db=sample()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+const P=id=>db.persons.find(p=>p.id===id);
+const yr=s=>{const m=/\d{4}/.exec(s||'');return m?+m[0]:null};
+const uid=()=>'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const kids=p=>db.persons.filter(c=>c.father===p.id||c.mother===p.id);
+function gen(p,s=new Set()){if(s.has(p.id))return 1;s.add(p.id);const a=[P(p.father),P(p.mother)].filter(Boolean);if(!a.length){const sp=(p.spouses||[]).map(P).filter(x=>x&&(x.father||x.mother));return sp.length?gen(sp[0],s):1}return 1+Math.max(...a.map(x=>gen(x,new Set(s))))}
+function toast(m){const d=document.createElement('div');d.textContent=m;d.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:8px;z-index:99';document.body.append(d);setTimeout(()=>d.remove(),2200)}
+const tabs=[['dash','Tổng quan'],['tree','Cây gia phả'],['list','Thành viên'],['br','Chi họ'],['ev','Ngày giỗ'],['chk','Kiểm tra'],['st','Nhà thờ & mộ'],['ai','AI số hóa'],['xw','Xuất Word'],['bk','Sao lưu']];
+function render(){document.getElementById('ttl').textContent='🏮 '+db.fam.name;
+nav.innerHTML=tabs.map(t=>`<button class="${view===t[0]?'on':''}" data-v="${t[0]}">${t[1]}</button>`).join('');
+dl.innerHTML=db.persons.map(p=>`<option value="${esc(p.name)}">`).join('');
+const m=document.getElementById('main');m.style.padding=view==='tree'?'10px':'14px';
+({dash,tree,list,br,ev,chk,bk,st:sites,ai:aiv,xw})[view](m)}
+nav.onclick=e=>{if(e.target.dataset.v){view=e.target.dataset.v;render()}};
+function dash(m){const ps=db.persons,gs=ps.map(p=>gen(p)),dead=ps.filter(p=>p.death).length,miss=ps.filter(p=>!p.birth).length;
+const st=[[ps.length,'Thành viên'],[Math.max(0,...gs),'Thế hệ'],[db.branches.length,'Chi họ'],[ps.length-dead,'Chưa ghi ngày mất'],[dead,'Đã mất'],[miss,'Thiếu năm sinh'],[ps.filter(p=>!p.ver).length,'Chưa xác minh']];
+m.innerHTML=(db.sample?`<div class="note">⚠️ Đang hiển thị <b>dữ liệu mẫu</b>. <a href="#" id="clr">Xóa dữ liệu mẫu và bắt đầu nhập thật</a></div>`:'')+
+`<div class="grid">${st.map(s=>`<div class="card stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</div>
+<div class="card"><h3 style="margin-top:0">Hồ sơ dòng họ</h3><p>Tên: <b>${esc(db.fam.name)}</b><br>Nguồn gốc: ${esc(db.fam.origin)||'<i>chưa nhập</i>'}<br>Trưởng họ: ${esc(db.fam.chief)||'<i>chưa nhập</i>'}</p>
+<button class="g" id="ef">Sửa hồ sơ</button> <button class="b" id="ap">+ Thêm thành viên</button> <button class="g" id="gt">Xem cây</button></div>`;
+const c=document.getElementById('clr');if(c)c.onclick=e=>{e.preventDefault();if(confirm('Xóa toàn bộ dữ liệu mẫu?')){db={fam:{name:'Dòng họ của tôi',origin:'',chief:''},branches:[],persons:[],sample:false};save();render()}};
+ef.onclick=()=>form([['name','Tên dòng họ',db.fam.name],['origin','Nguồn gốc / quê quán',db.fam.origin],['chief','Trưởng họ',db.fam.chief]],'Hồ sơ dòng họ',v=>{Object.assign(db.fam,v);save();render()});
+ap.onclick=()=>personForm();gt.onclick=()=>{view='tree';render()}}
+function form(fields,title,cb){fm.innerHTML=`<h3>${title}</h3>`+fields.map(f=>`<label>${f[1]}</label><input name="${f[0]}" value="${esc(f[2])}">`).join('')+`<div style="margin-top:12px;text-align:right"><button class="g" value="x" formnovalidate>Hủy</button> <button class="b" value="ok">Lưu</button></div>`;
+fm.onsubmit=e=>{if(e.submitter&&e.submitter.value==='ok'){cb(Object.fromEntries(new FormData(fm)))}};dlg.showModal()}
+function personForm(p,pre){const n=!p;p=p||Object.assign({id:uid(),name:'',g:'M',birth:'',death:'',branch:'',father:'',mother:'',spouses:[],note:'',ver:false},pre||{});
+const opt=(g,v)=>`<option value="">— chưa rõ —</option>`+db.persons.filter(x=>(!g||x.g===g)&&x.id!==p.id).map(x=>`<option value="${x.id}" ${x.id===v?'selected':''}>${esc(x.name)} (${esc(x.birth)||'?'})</option>`).join('');
+fm.innerHTML=`<h3>${n?'Thêm':'Sửa'} thành viên</h3><label>Họ và tên *</label><input name="name" required value="${esc(p.name)}">
+<label>Giới tính</label><select name="g"><option value="M" ${p.g==='M'?'selected':''}>Nam</option><option value="F" ${p.g==='F'?'selected':''}>Nữ</option><option value="U" ${p.g==='U'?'selected':''}>Chưa xác định</option></select>
+<label>Sinh (năm hoặc YYYY-MM-DD, có thể để trống)</label><input name="birth" value="${esc(p.birth)}"><label>Mất</label><input name="death" value="${esc(p.death)}">
+<label>Chi họ</label><input name="branch" list="bl" value="${esc(p.branch)}"><datalist id="bl">${db.branches.map(b=>`<option value="${esc(b)}">`).join('')}</datalist>
+<label>Cha</label><select name="father">${opt('M',p.father)}</select><label>Mẹ</label><select name="mother">${opt('F',p.mother)}</select>
+<label>Ghi chú / nguồn</label><textarea name="note" rows="2">${esc(p.note)}</textarea><label><input type="checkbox" name="ver" style="width:auto" ${p.ver?'checked':''}> Đã xác minh</label>
+<div style="margin-top:12px;text-align:right"><button class="g" value="x" formnovalidate>Hủy</button> <button class="b" value="ok">Lưu</button></div>`;
+fm.onsubmit=e=>{if(!e.submitter||e.submitter.value!=='ok')return;const f=Object.fromEntries(new FormData(fm));
+const isD=(x,r,s=new Set())=>x&&!s.has(x)&&(x===r||(s.add(x),!!P(x)&&[P(x).father,P(x).mother].some(y=>isD(y,r,s))));if(isD(f.father,p.id)||isD(f.mother,p.id)){e.preventDefault();toast('Quan hệ cha/mẹ tạo vòng lặp hoặc tự làm cha/mẹ của chính mình');return}const np=Object.assign(p,{name:f.name.trim(),g:f.g,birth:f.birth.trim(),death:f.death.trim(),branch:f.branch.trim(),father:f.father,mother:f.mother,note:f.note,ver:!!f.ver});
+
+if(pre&&pre.link){const o=P(pre.link);if(o&&!o.spouses.includes(np.id))o.spouses.push(np.id);if(!np.spouses.includes(o.id))np.spouses.push(o.id)}
+delete np.link;if(n)db.persons.push(np);if(np.branch&&!db.branches.includes(np.branch))db.branches.push(np.branch);save();sel=np.id;render()};dlg.showModal()}
+function list(m,f=''){const ps=db.persons.filter(p=>(p.name+p.branch+p.id).toLowerCase().includes((q.value||'').toLowerCase()));
+m.innerHTML=`<div class="bar"><button class="b" id="ap">+ Thêm thành viên</button><span class="tag">${ps.length}/${db.persons.length}</span></div><div class="card tw"><table><tr><th>Họ tên</th><th>Sinh–Mất</th><th>Đời</th><th>Chi</th><th>Trạng thái</th></tr>${ps.map(p=>`<tr class="cl" data-id="${p.id}"><td>${esc(p.name)}</td><td>${esc(p.birth)||'?'}–${esc(p.death)}</td><td>${gen(p)}</td><td>${esc(p.branch)}</td><td>${p.ver?'✔ đã xác minh':'chưa xác minh'}</td></tr>`).join('')||'<tr><td colspan=5>Chưa có dữ liệu</td></tr>'}</table></div>`;
+ap.onclick=()=>personForm();m.querySelectorAll('tr.cl').forEach(r=>r.onclick=()=>{sel=r.dataset.id;view='tree';render()})}
+q.oninput=()=>{if(view==='list')render();else{const p=db.persons.find(p=>p.name.toLowerCase()===q.value.toLowerCase());if(p){sel=p.id;view='tree';render()}}};
+function br(m){m.innerHTML=`<div class="bar"><button class="b" id="ab">+ Thêm chi họ</button></div><div class="grid">${db.branches.map(b=>{const ps=db.persons.filter(p=>p.branch===b);return`<div class="card"><b>${esc(b)}</b><br><span class="tag">${ps.length} thành viên</span><p style="color:var(--mu);font-size:13px">${ps.slice(0,6).map(p=>esc(p.name)).join(', ')}</p></div>`}).join('')||'<p>Chưa có chi họ.</p>'}</div>`;
+ab.onclick=()=>form([['n','Tên chi','']],'Thêm chi họ',v=>{if(v.n.trim()&&!db.branches.includes(v.n.trim())){db.branches.push(v.n.trim());save();render()}})}
+function ev(m){const ps=db.persons.filter(p=>p.death).sort((a,b)=>(a.death.length>5?a.death.slice(5):'z').localeCompare(b.death.length>5?b.death.slice(5):'z'));
+m.innerHTML=`<div class="note">Ngày giỗ lấy từ ngày mất đã nhập. Âm lịch được quy đổi tự động từ ngày mất dương đầy đủ (YYYY-MM-DD, múi giờ UTC+7). Hãy đối chiếu với gia phả/lịch trước khi dùng cho lễ giỗ.</div><div class="card tw"><table><tr><th>Người mất</th><th>Ngày mất (dương)</th><th>Giỗ (âm lịch, quy đổi)</th><th>Ghi chú</th></tr>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.death)}${p.death.length<8?' <span class="tag">chưa đủ ngày</span>':''}</td><td>${esc(lun(p.death))||'—'}</td><td>${esc(p.note)}</td></tr>`).join('')||'<tr><td colspan=4>Chưa có dữ liệu</td></tr>'}</table></div>`}
+function check(){const r=[],ps=db.persons;
+ps.forEach(p=>{const b=yr(p.birth),d=yr(p.death);
+if(b&&d&&d<b)r.push(['err',`${p.name}: năm mất trước năm sinh`,p.id]);
+[p.father,p.mother].map(P).filter(Boolean).forEach(a=>{const ab=yr(a.birth);if(b&&ab&&b-ab<12)r.push(['warn',`${p.name}: sinh cách ${a.name} chỉ ${b-ab} năm (bất thường)`,p.id]);const ad=yr(a.death);if(b&&ad&&b>ad+1&&a.g==='M')r.push(['warn',`${p.name}: sinh sau khi cha ${a.name} mất`,p.id])});
+let c=p,s=new Set();const st=[p.id];while(st.length){const x=P(st.pop());if(!x)continue;for(const k of [x.father,x.mother]){if(!k)continue;if(k===p.id){r.push(['err',`${p.name}: vòng lặp tổ tiên`,p.id]);st.length=0;break}if(!s.has(k)){s.add(k);st.push(k)}}}
+if(!p.father&&!p.mother&&!ps.some(o=>(o.spouses||[]).includes(p.id)&&(o.father||o.mother)))r.push(['ok',`${p.name}: chưa rõ cha mẹ (gốc cây)`,p.id]);
+if(!p.birth)r.push(['warn',`${p.name}: thiếu năm sinh`,p.id])});
+const nm={};ps.forEach(p=>(nm[p.name.toLowerCase()]=nm[p.name.toLowerCase()]||[]).push(p));Object.values(nm).filter(a=>a.length>1).forEach(a=>r.push(['warn',`Có thể trùng bản ghi: ${a[0].name} (${a.length}) — cần xem xét, không tự gộp`,a[0].id]));return r}
+function chk(m){const r=check();m.innerHTML=`<div class="note">Cảnh báo chỉ là gợi ý để rà soát, không có nghĩa dữ liệu sai. Hệ thống không tự sửa quan hệ.</div>`+(r.map(x=>`<div class="card ${x[0]}" style="margin-bottom:6px;cursor:pointer" data-id="${x[2]}">${x[0]==='err'?'⛔':x[0]==='warn'?'⚠️':'ℹ️'} ${esc(x[1])}</div>`).join('')||'<p>✅ Không phát hiện vấn đề.</p>');
+m.querySelectorAll('[data-id]').forEach(e=>e.onclick=()=>{sel=e.dataset.id;view='tree';render()})}
+function bk(m){m.innerHTML=`<div class="card"><h3 style="margin-top:0">Sao lưu & phục hồi</h3><p>Dữ liệu lưu trong trình duyệt này. Hãy tải bản sao lưu JSON thường xuyên. (Ảnh đính kèm chưa được hỗ trợ ở bản này.)</p>
+<button class="b" id="ex">⬇ Tải JSON</button> <button class="g" id="cs">⬇ Tải CSV</button> <label class="g" style="display:inline-block;padding:7px 12px;border-radius:6px;cursor:pointer">⬆ Khôi phục JSON<input type="file" id="rs" accept=".json" hidden></label> <label class="g" style="display:inline-block;padding:7px 12px;border-radius:6px;cursor:pointer">⬆ Nhập CSV<input type="file" id="ci" accept=".csv" hidden></label><p style="font-size:13px;color:var(--mu)">CSV cần dòng tiêu đề: id,hoten,gioitinh,sinh,mat,chi,cha,me (cha/mẹ là id trong file). Dòng trùng họ tên + năm sinh sẽ bị bỏ qua, không tự gộp.</p></div>`;ci.onchange=impCSV;
+ex.onclick=()=>dlf(JSON.stringify(db,null,1),'gia-pha-backup.json','application/json');
+cs.onclick=()=>dlf('\ufeffid,hoten,gioitinh,sinh,mat,chi,cha,me,vochong\n'+db.persons.map(p=>[p.id,p.name,p.g,p.birth,p.death,p.branch,p.father,p.mother,(p.spouses||[]).join(';')].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n'),'thanh-vien.csv','text/csv');
+rs.onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const d=JSON.parse(t);if(!Array.isArray(d.persons)||!d.fam)throw 0;if(confirm(`Khôi phục ${d.persons.length} thành viên? Dữ liệu hiện tại sẽ bị thay thế.`)){db=d;db.branches=db.branches||[];save();view='dash';render();toast('Đã khôi phục')}}catch(x){toast('File không hợp lệ')}})}}
+async function dlf(t,n,mt){try{const d=await claude.use('downloads');if(!d)return toast('Không thể lưu file ở chế độ xem này');await d.save({filename:n,data:t instanceof Blob?t:new Blob([t],{type:mt})});toast('Đã lưu '+n)}catch(e){if(!e||e.code!=='declined')toast('Không lưu được '+n)}}
+/* ---- TREE ---- */
+const CW=150,CH=56,GX=18,GY=70;
+function build(){const placed=new Set(),roots=[];
+const isMarried=p=>db.persons.some(o=>(o.spouses||[]).includes(p.id)&&(o.father||o.mother));
+function unit(p,d){if(placed.has(p.id)||d>40)return null;placed.add(p.id);const mem=[p];(p.spouses||[]).map(P).forEach(s=>{if(s&&!placed.has(s.id)){placed.add(s.id);mem.push(s)}});
+const ks=[...new Set(mem.flatMap(kids))].filter(k=>!placed.has(k.id)).sort((a,b)=>(yr(a.birth)||9999)-(yr(b.birth)||9999));
+const col=mem.some(x=>collapsed.has(x.id));const n={mem,ch:[],w:0};if(!col)ks.forEach(k=>{const u=unit(k,d+1);if(u)n.ch.push(u)});else{const hd=a=>a.forEach(k=>{if(!placed.has(k.id)){placed.add(k.id);(k.spouses||[]).forEach(s=>placed.add(s));hd(kids(k))}});hd(ks)}n.hid=col&&ks.length;
+const uw=mem.length*CW+(mem.length-1)*8;const cw=n.ch.reduce((s,c)=>s+c.w,0)+Math.max(0,n.ch.length-1)*GX;n.uw=uw;n.w=Math.max(uw,cw);return n}
+db.persons.filter(p=>!p.father&&!p.mother&&!isMarried(p)).forEach(p=>{const u=unit(p,0);if(u)roots.push(u)});
+db.persons.filter(p=>!placed.has(p.id)).forEach(p=>{const u=unit(p,0);if(u)roots.push(u)});return roots}
+function place(n,x,d,out){n.x=x+(n.w-n.uw)/2;n.d=d;out.push(n);let cx=x;n.ch.forEach(c=>{place(c,cx,d+1,out);cx+=c.w+GX})}
+function tree(m){m.innerHTML=`<div class="bar"><button class="b" id="ap">+ Thêm</button><button class="g" id="fit">Căn giữa</button><button class="g" id="zi">＋</button><button class="g" id="zo">－</button><button class="g" id="ca">Thu gọn tất cả</button><button class="g" id="ea">Mở rộng</button><button class="g" id="dr">↔/↕</button><button class="g" id="pn">⬇ PNG</button><button class="g" id="sv">⬇ SVG</button><button class="g" id="fs">⛶</button></div>
+<div id="treeBox"><div id="svgw"><svg id="svg" xmlns="http://www.w3.org/2000/svg"><g id="vp"></g></svg></div><div id="side"></div></div>`;
+const roots=build(),out=[];let ox=0;roots.forEach(r=>{place(r,ox,0,out);ox+=r.w+60});
+let h='',pos={};
+out.forEach(n=>{n.mem.forEach((p,i)=>{const px=n.x+i*(CW+8),py=n.d*(CH+GY);pos[p.id]=[px,py];n.cx=n.x+n.uw/2})});
+const tr=(x,y)=>dir==='V'?[x,y]:[y*1.5,x*0.45];
+const cardXY=id=>{const[a,b]=pos[id];return dir==='V'?[a,b]:[b*1.35,a*0.42]};
+out.forEach(n=>{if(n.mem.length>1)for(let i=0;i<n.mem.length-1;i++){const a=cardXY(n.mem[i].id),b=cardXY(n.mem[i+1].id);h+=dir==='V'?`<line x1="${a[0]+CW}" y1="${a[1]+CH/2}" x2="${b[0]}" y2="${b[1]+CH/2}" stroke="#b8892b" stroke-width="3"/>`:`<line x1="${a[0]+CW/2}" y1="${a[1]+CH}" x2="${b[0]+CW/2}" y2="${b[1]}" stroke="#b8892b" stroke-width="3"/>`}
+n.ch.forEach(c=>{const a=dir==='V'?[n.x+n.uw/2,n.d*(CH+GY)+CH]:[cardXY(n.mem[0].id)[0]+CW,cardXY(n.mem[0].id)[1]+CH/2];const cp=cardXY(c.mem[0].id),cx=dir==='V'?c.x+c.uw/2:cp[0],cy=dir==='V'?cp[1]:cp[1]+CH/2;
+h+=dir==='V'?`<path d="M${a[0]} ${a[1]}V${a[1]+GY/2}H${cx}V${cy}" fill="none" stroke="#8a7a68" stroke-width="1.6"/>`:`<path d="M${a[0]} ${a[1]}H${a[0]+30}V${cy}H${cx}" fill="none" stroke="#8a7a68" stroke-width="1.6"/>`});});
+const dk=matchMedia('(prefers-color-scheme:dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
+out.forEach(n=>n.mem.forEach(p=>{const[x,y]=cardXY(p.id);const s=p.id===sel;const fill=p.g==='F'?(dk?'#4a2f38':'#fbe9ec'):(dk?'#2f3a4a':'#eef3fb');
+h+=`<g data-id="${p.id}" style="cursor:pointer"><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="8" fill="${fill}" stroke="${s?'#8b1e2d':'#b8892b'}" stroke-width="${s?3:1.5}"${p.ver?'':' stroke-dasharray="4 3"'}/>
+<text x="${x+CW/2}" y="${y+22}" text-anchor="middle" font-size="13" font-weight="700" fill="${dk?'#f1e8da':'#2b2118'}" font-family="Arial,sans-serif">${esc(p.name.length>20?p.name.slice(0,19)+'…':p.name)}</text>
+<text x="${x+CW/2}" y="${y+38}" text-anchor="middle" font-size="11" fill="${dk?'#b5a590':'#7a6a58'}" font-family="Arial,sans-serif">${esc(p.birth)||'?'}–${esc(p.death)}</text>
+<text x="${x+CW/2}" y="${y+51}" text-anchor="middle" font-size="10" fill="#b8892b" font-family="Arial,sans-serif">Đời ${gen(p)}${p.branch?' · '+esc(p.branch):''}</text>
+${kids(p).length?`<text class="tg" data-t="${p.id}" x="${x+CW-8}" y="${y+14}" font-size="12" fill="#8b1e2d" text-anchor="middle">${collapsed.has(p.id)?'⊕':'⊖'}</text>`:''}</g>`}));
+vp.innerHTML=h;const ap0=ap;
+function app(){vp.setAttribute('transform',`translate(${T.x} ${T.y}) scale(${T.k})`)}
+const bb=()=>vp.getBBox();
+function fitv(){const b=bb(),r=svg.getBoundingClientRect();if(!b.width)return;T.k=Math.min(1,(r.width-40)/b.width,(r.height-40)/b.height);T.x=(r.width-b.width*T.k)/2-b.x*T.k;T.y=20-b.y*T.k;app()}
+function focus(id){const[x,y]=cardXY(id),r=svg.getBoundingClientRect();T.k=1;T.x=r.width/2-x-CW/2;T.y=r.height/2-y-CH/2;app()}
+if(keep){keep=false;app()}else if(sel&&pos[sel])focus(sel);else fitv();if(sel&&pos[sel])panel();
+fit.onclick=fitv;zi.onclick=()=>{T.k*=1.2;app()};zo.onclick=()=>{T.k/=1.2;app()};
+ca.onclick=()=>{db.persons.filter(p=>kids(p).length).forEach(p=>collapsed.add(p.id));render()};ea.onclick=()=>{collapsed.clear();render()};
+dr.onclick=()=>{dir=dir==='V'?'H':'V';render()};fs.onclick=()=>{treeBox.requestFullscreen&&treeBox.requestFullscreen()};
+ap0.onclick=()=>personForm();
+svg.onwheel=e=>{e.preventDefault();const r=svg.getBoundingClientRect(),f=e.deltaY<0?1.1:1/1.1,mx=e.clientX-r.left,my=e.clientY-r.top;T.x=mx-(mx-T.x)*f;T.y=my-(my-T.y)*f;T.k*=f;app()};
+let drag=null,moved=false;svg.onpointerdown=e=>{drag=[e.clientX,e.clientY,T.x,T.y];moved=false;svg.setPointerCapture(e.pointerId)};
+svg.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];if(Math.abs(dx)+Math.abs(dy)>4)moved=true;T.x=drag[2]+dx;T.y=drag[3]+dy;app()};
+svg.onpointerup=e=>{drag=null;if(moved)return;const el=document.elementFromPoint(e.clientX,e.clientY)||e.target,t=el.closest('[data-t]');if(t){collapsed.has(t.dataset.t)?collapsed.delete(t.dataset.t):collapsed.add(t.dataset.t);keep=true;render();return}const g=el.closest('[data-id]');if(g){sel=g.dataset.id;keep=true;render()}else{sel=null;side.classList.remove('on')}};
+function exp(){const b=bb(),c=svg.cloneNode(true);c.querySelector('#vp').removeAttribute('transform');c.setAttribute('viewBox',`${b.x-20} ${b.y-20} ${b.width+40} ${b.height+40}`);c.setAttribute('width',b.width+40);c.setAttribute('height',b.height+40);c.removeAttribute('style');
+const bgc=document.createElementNS('http://www.w3.org/2000/svg','rect');bgc.setAttribute('x',b.x-20);bgc.setAttribute('y',b.y-20);bgc.setAttribute('width',b.width+40);bgc.setAttribute('height',b.height+40);bgc.setAttribute('fill',dk?'#1c1713':'#faf6ee');c.insertBefore(bgc,c.firstChild);return[new XMLSerializer().serializeToString(c),b.width+40,b.height+40]}
+sv.onclick=()=>{if(!db.persons.length)return toast('Chưa có dữ liệu');dlf(exp()[0],'cay-gia-pha.svg','image/svg+xml')};
+pn.onclick=()=>{if(!db.persons.length)return toast('Chưa có dữ liệu');const[s,w,h2]=exp(),im=new Image(),k=Math.min(2,8000/Math.max(w,h2));im.onload=()=>{const cv=document.createElement('canvas');cv.width=w*k;cv.height=h2*k;const x=cv.getContext('2d');x.scale(k,k);x.drawImage(im,0,0);cv.toBlob(bl=>dlf(bl,'cay-gia-pha.png','image/png'))};im.onerror=()=>toast('Xuất PNG thất bại, hãy dùng SVG');im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)};
+if(!db.persons.length)vp.innerHTML='<text x="40" y="60" fill="#7a6a58" font-size="16">Chưa có thành viên. Bấm “+ Thêm” để thêm thủy tổ.</text>'}
+function panel(){const p=P(sel);if(!p)return;const f=P(p.father),mo=P(p.mother),sp=(p.spouses||[]).map(P).filter(Boolean),ks=kids(p);
+side.classList.add('on');side.innerHTML=`<h3 style="margin:0">${esc(p.name)}</h3><div style="color:var(--mu)">${esc(p.birth)||'?'} – ${esc(p.death)}<br>Đời ${gen(p)} ${p.branch?'· '+esc(p.branch):''}<br>${p.ver?'✔ Đã xác minh':'Chưa xác minh'}</div>
+<p>Cha: ${f?esc(f.name):'—'}<br>Mẹ: ${mo?esc(mo.name):'—'}<br>Vợ/chồng: ${sp.map(s=>esc(s.name)).join(', ')||'—'}<br>Con: ${ks.map(k=>esc(k.name)).join(', ')||'—'}</p><p>${esc(p.note)}</p>
+<div style="display:grid;gap:6px"><button class="b" id="a1">+ Thêm con</button><button class="g" id="a2">+ Thêm vợ/chồng</button><button class="g" id="a3">Sửa</button><button class="g" id="a4">Xóa</button><button class="g" id="a5">Gộp với bản ghi trùng</button></div>`;a5.onclick=()=>mergeF(p);
+a1.onclick=()=>personForm(null,{father:p.g==='M'?p.id:(sp[0]&&sp[0].g==='M'?sp[0].id:''),mother:p.g==='F'?p.id:(sp[0]&&sp[0].g==='F'?sp[0].id:''),branch:p.branch});
+a2.onclick=()=>personForm(null,{g:p.g==='M'?'F':'M',link:p.id});a3.onclick=()=>personForm(p);
+a4.onclick=()=>{const n=ks.length;if(confirm(`Xóa ${p.name}?`+(n?`\nQuan hệ cha/mẹ của ${n} người con sẽ bị bỏ trống (con cháu không bị xóa).`:''))){db.persons.forEach(o=>{if(o.father===p.id)o.father='';if(o.mother===p.id)o.mother='';o.spouses=(o.spouses||[]).filter(i=>i!==p.id)});db.persons=db.persons.filter(o=>o.id!==p.id);sel=null;save();render()}}}
+th.onclick=()=>{const r=document.documentElement;r.dataset.theme=(r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches))?'light':'dark';render()};
+const PI=Math.PI,jdn=(d,m,y)=>{const a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045};
+function nmo(k){const T=k/1236.85,T2=T*T,T3=T2*T,r=PI/180,s=Math.sin;let J=2415020.75933+29.53058868*k+0.0001178*T2-0.000000155*T3+0.00033*s((166.56+132.87*T-0.009173*T2)*r);const M=359.2242+29.10535608*k-0.0000333*T2-0.00000347*T3,Q=306.0253+385.81691806*k+0.0107306*T2+0.00001236*T3,F=21.2964+390.67050646*k-0.0016528*T2-0.00000239*T3;const C=(0.1734-0.000393*T)*s(M*r)+0.0021*s(2*r*M)-0.4068*s(Q*r)+0.0161*s(r*2*Q)-0.0004*s(r*3*Q)+0.0104*s(r*2*F)-0.0051*s(r*(M+Q))-0.0074*s(r*(M-Q))+0.0004*s(r*(2*F+M))-0.0004*s(r*(2*F-M))-0.0006*s(r*(2*F+Q))+0.001*s(r*(2*F-Q))+0.0005*s(r*(2*Q+M));const dt=T<-11?0.001+0.000839*T+0.0002261*T2-0.00000845*T3-0.000000081*T*T3:-0.000278+0.000265*T+0.000262*T2;return J+C-dt}
+const nd=k=>Math.floor(nmo(k)+0.5+7/24);
+function sl(j){const T=(j-2451545.5-7/24)/36525,T2=T*T,r=PI/180,M=357.5291+35999.0503*T-0.0001559*T2-0.00000048*T*T2,L0=280.46645+36000.76983*T+0.0003032*T2,DL=(1.9146-0.004817*T-0.000014*T2)*Math.sin(r*M)+(0.019993-0.000101*T)*Math.sin(r*2*M)+0.00029*Math.sin(r*3*M);let L=(L0+DL)*r;L-=PI*2*Math.floor(L/(PI*2));return Math.floor(L/PI*6)}
+function m11(y){const k=Math.floor((jdn(31,12,y)-2415021)/29.530588853);let n=nd(k);if(sl(n)>=9)n=nd(k-1);return n}
+function lo(a){const k=Math.floor((a-2415021.076998695)/29.530588853+0.5);let i=1,c=sl(nd(k+i)),l;do{l=c;i++;c=sl(nd(k+i))}while(c!==l&&i<14);return i-1}
+function lunar(d,m,y){const dn=jdn(d,m,y),k=Math.floor((dn-2415021.076998695)/29.530588853);let ms=nd(k+1);if(ms>dn)ms=nd(k);let a=m11(y),b=a,ly;if(a>=ms){ly=y;a=m11(y-1)}else{ly=y+1;b=m11(y+1)}const df=Math.floor((ms-a)/29);let lm=df+11,lp=0;if(b-a>365){const l=lo(a);if(df>=l){lm=df+10;if(df===l)lp=1}}if(lm>12)lm-=12;if(lm>=11&&df<4)ly-=1;return[dn-ms+1,lm,ly,lp]}
+const lun=s=>{const m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s||'');if(!m)return'';const r=lunar(+m[3],+m[2],+m[1]);return r[0]+'/'+r[1]+(r[3]?' (nhuận)':'')+' năm '+r[2]};
+function parseCSV(t){const r=[];let w=[],c='',q=false;t=t.replace(/^\ufeff/,'');for(let i=0;i<t.length;i++){const h=t[i];if(q){if(h==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=h}else if(h==='"')q=true;else if(h===','){w.push(c);c=''}else if(h==='\n'||h==='\r'){if(h==='\r'&&t[i+1]==='\n')i++;w.push(c);c='';if(w.some(x=>x))r.push(w);w=[]}else c+=h}w.push(c);if(w.some(x=>x))r.push(w);return r}
+function impCSV(e){const f=e.target.files[0];if(!f)return;f.text().then(t=>{const r=parseCSV(t),h=(r.shift()||[]).map(x=>x.trim().toLowerCase()),ix=n=>h.indexOf(n);if(ix('hoten')<0)return toast('Thiếu cột "hoten"');const map={},add=[],skip=[];r.forEach(x=>{const g=n=>ix(n)<0?'':(x[ix(n)]||'').trim(),name=g('hoten');if(!name)return;const dup=db.persons.find(p=>p.name.toLowerCase()===name.toLowerCase()&&(p.birth||'')===g('sinh'));if(dup){skip.push(name);map[g('id')]=dup.id;return}const id=uid();map[g('id')]=id;add.push({id,name,sp:g('vochong'),g:({nam:'M','nữ':'F',nu:'F',m:'M',f:'F'})[g('gioitinh').toLowerCase()]||'U',birth:g('sinh'),death:g('mat'),branch:g('chi'),father:g('cha'),mother:g('me'),spouses:[],note:'',ver:false})});if(!confirm(`Nhập ${add.length} thành viên mới.\nBỏ qua ${skip.length} dòng trùng họ tên + năm sinh${skip.length?' ('+skip.slice(0,5).join(', ')+')':''}.\nTiếp tục?`))return;add.forEach(p=>{p.father=map[p.father]||'';p.mother=map[p.mother]||'';p.spouses=(p.sp||'').split(';').map(i=>map[i]).filter(x=>x&&x!==p.id);delete p.sp;if(p.branch&&!db.branches.includes(p.branch))db.branches.push(p.branch)});db.persons.push(...add);add.forEach(p=>p.spouses.forEach(s=>{const o=P(s);if(o&&!o.spouses.includes(p.id))o.spouses.push(p.id)}));save();render();toast('Đã nhập '+add.length)})}
+function mergeF(a){fm.innerHTML=`<h3>Gộp vào “${esc(a.name)}”</h3><p style="font-size:13px">Bản ghi được chọn sẽ bị xóa; chỗ trống của hồ sơ này được bổ sung từ nó và mọi quan hệ chuyển sang hồ sơ này.</p><label>Bản ghi trùng</label><select name="b">${db.persons.filter(x=>x.id!==a.id).map(x=>`<option value="${x.id}">${esc(x.name)} (${esc(x.birth)||'?'})</option>`).join('')}</select><div style="margin-top:12px;text-align:right"><button class="g" value="x" formnovalidate>Hủy</button> <button class="b" value="ok">Gộp</button></div>`;fm.onsubmit=e=>{if(!e.submitter||e.submitter.value!=='ok')return;const b=P(new FormData(fm).get('b'));if(!b||!confirm(`Gộp “${b.name}” vào “${a.name}”? Không hoàn tác được — hãy sao lưu trước.`))return;['birth','death','branch','father','mother'].forEach(k=>{if(!a[k])a[k]=b[k]});if(b.note&&!a.note.includes(b.note))a.note=(a.note?a.note+'\n':'')+b.note;const bs=b.spouses||[];db.persons.forEach(o=>{if(o.father===b.id)o.father=a.id;if(o.mother===b.id)o.mother=a.id;o.spouses=[...new Set((o.spouses||[]).map(i=>i===b.id?a.id:i))].filter(i=>i!==o.id)});a.spouses=[...new Set([...(a.spouses||[]),...bs])].filter(i=>i!==a.id&&i!==b.id);db.persons=db.persons.filter(o=>o.id!==b.id);if(a.father===a.id)a.father='';if(a.mother===a.id)a.mother='';save();render()};dlg.showModal()}
+function sites(m){db.sites=db.sites||[];m.innerHTML=`<div class="bar"><button class="b" id="asb">+ Thêm nhà thờ / phần mộ</button></div><div class="card tw"><table><tr><th>Loại</th><th>Tên / người an táng</th><th>Địa chỉ, đường đi</th><th>Ghi chú</th><th></th></tr>${db.sites.map((s,i)=>`<tr><td>${esc(s.type)}</td><td>${esc(s.name)}</td><td>${esc(s.addr)}</td><td>${esc(s.note)}</td><td><button class="g" data-e="${i}">Sửa</button> <button class="g" data-d="${i}">Xóa</button></td></tr>`).join('')||'<tr><td colspan=5>Chưa có dữ liệu</td></tr>'}</table></div>`;const ed=(s,i)=>form([['type','Loại (Nhà thờ họ / Phần mộ)',s.type],['name','Tên / người an táng',s.name],['addr','Địa chỉ, đường đi',s.addr],['note','Ghi chú (năm xây/tu sửa, tình trạng…)',s.note]],'Nhà thờ / phần mộ',v=>{i<0?db.sites.push(v):db.sites[i]=v;save();render()});asb.onclick=()=>ed({type:'Phần mộ',name:'',addr:'',note:''},-1);m.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>ed(db.sites[b.dataset.e],+b.dataset.e));m.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{if(confirm('Xóa mục này?')){db.sites.splice(b.dataset.d,1);save();render()}})}
+async function aiv(m){m.innerHTML=`<div class="note">Dán văn bản gia phả (đã gõ lại hoặc OCR). Claude chỉ <b>đề xuất bản nháp</b>; bạn xem lại rồi mới thêm (mặc định “chưa xác minh”). Văn bản sẽ được gửi tới Claude để xử lý — chỉ dùng khi bạn đồng ý. Chưa đọc trực tiếp ảnh/PDF.</div><textarea id="ait" rows="8" style="width:100%;padding:8px" placeholder="Dán văn bản…"></textarea><div class="bar" style="margin-top:8px"><button class="b" id="aig">Trích xuất thành viên</button></div><div id="aio"></div>`;let sp=null;try{sp=await claude.use('sample')}catch(e){}if(!sp){aig.disabled=true;aio.innerHTML='<p>Tính năng AI không khả dụng ở lượt xem này.</p>';return}aig.onclick=async()=>{const t=ait.value.trim();if(!t)return;aio.textContent='Đang phân tích…';try{const r=await sp.json('Trích xuất thành viên gia phả từ văn bản sau. TUYỆT ĐỐI không bịa tên, ngày hay quan hệ; chỉ ghi điều văn bản nêu, thiếu thì để chuỗi rỗng. Trả về DUY NHẤT JSON: {"persons":[{"ref":"r1","name":"","g":"M|F|U","birth":"","death":"","father":"ref hoặc rỗng","mother":"ref hoặc rỗng","evidence":"trích ngắn từ văn bản"}]}\n\nVĂN BẢN:\n'+t);const ps=r.persons||[];const nm=x=>(ps.find(y=>y.ref===x)||{}).name;aio.innerHTML=`<div class="card tw"><table><tr><th>Tên</th><th>Sinh–Mất</th><th>Cha</th><th>Mẹ</th><th>Căn cứ</th></tr>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.birth)}–${esc(p.death)}</td><td>${esc(nm(p.father))}</td><td>${esc(nm(p.mother))}</td><td>${esc(p.evidence)}</td></tr>`).join('')}</table></div><button class="b" id="aik">Thêm ${ps.length} người (chưa xác minh)</button>`;aik.onclick=()=>{const mp={};ps.forEach(p=>mp[p.ref]=uid());ps.forEach(p=>db.persons.push({id:mp[p.ref],name:p.name,g:['M','F'].includes(p.g)?p.g:'U',birth:p.birth||'',death:p.death||'',branch:'',father:mp[p.father]||'',mother:mp[p.mother]||'',spouses:[],note:'Nguồn: AI trích từ văn bản, cần đối chiếu',ver:false}));save();view='tree';render()}}catch(e){aio.textContent='Không thực hiện được: '+(e.message||e.code||'lỗi')}}}
+function xw(m){m.innerHTML=`<div class="card"><h3 style="margin-top:0">Xuất hồ sơ gia phả (.docx)</h3><label><input type="checkbox" id="o1" checked> Danh sách theo thế hệ</label><br><label><input type="checkbox" id="o2" checked> Hồ sơ từng thành viên</label><br><label><input type="checkbox" id="o3" checked> Danh sách ngày giỗ</label><p style="color:var(--mu);font-size:13px">Tạo tệp Word thật; mở bằng Word rồi “Lưu thành PDF” nếu cần bản PDF. Sơ đồ cây: dùng nút PNG/SVG ở tab Cây. Chưa có mục lục và số trang tự động.</p><button class="b" id="gx">Tạo file Word</button></div>`;gx.onclick=async()=>{try{if(!window.docx)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';s.onload=ok;s.onerror=no;document.head.append(s)});const D=docx,H=D.HeadingLevel,C=D.AlignmentType.CENTER,T=(t,o={})=>new D.Paragraph({alignment:o.c?C:undefined,children:[new D.TextRun({text:t,font:'Times New Roman',bold:o.b,size:o.s})]}),h1=t=>new D.Paragraph({text:t,heading:H.HEADING_1,pageBreakBefore:true}),h2=t=>new D.Paragraph({text:t,heading:H.HEADING_2});const ps=[...db.persons].sort((a,b)=>gen(a)-gen(b)||(yr(a.birth)||9999)-(yr(b.birth)||9999));const ch=[T(db.fam.name.toUpperCase(),{c:1,b:1,s:48}),T('GIA PHẢ DÒNG HỌ',{c:1,s:32}),T(db.fam.origin?'Nguồn gốc: '+db.fam.origin:'',{c:1}),T(db.fam.chief?'Trưởng họ: '+db.fam.chief:'',{c:1})];if(o1.checked){ch.push(h1('Danh sách theo thế hệ'));let g=0;ps.forEach(p=>{const x=gen(p);if(x!==g){g=x;ch.push(h2('Đời thứ '+g))}ch.push(T(`• ${p.name} (${p.birth||'?'}–${p.death||''})`+(p.branch?' · '+p.branch:'')))})}if(o2.checked){ch.push(h1('Hồ sơ thành viên'));ps.forEach(p=>{ch.push(h2(p.name));[['Đời',gen(p)],['Sinh',p.birth],['Mất',p.death],['Chi họ',p.branch],['Cha',(P(p.father)||{}).name],['Mẹ',(P(p.mother)||{}).name],['Vợ/chồng',(p.spouses||[]).map(i=>(P(i)||{}).name).join(', ')],['Con',kids(p).map(k=>k.name).join(', ')],['Ghi chú',p.note],['Trạng thái',p.ver?'Đã xác minh':'Chưa xác minh']].forEach(([a,b])=>{if(b)ch.push(T(a+': '+b))})})}if(o3.checked){ch.push(h1('Danh sách ngày giỗ'));ps.filter(p=>p.death).forEach(p=>ch.push(T(`${p.name} — mất: ${p.death}`+(lun(p.death)?' (âm lịch: '+lun(p.death)+')':''))))}const bl=await D.Packer.toBlob(new D.Document({sections:[{children:ch}]}));dlf(bl,'gia-pha.docx')}catch(e){toast('Xuất Word thất bại: '+(e.message||'không tải được thư viện'))}}}
+dlg.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type!=='checkbox'){e.preventDefault();const ok=fm.querySelector('[value=ok]');ok&&fm.requestSubmit(ok)}});
+load();render();
+</script></body></html>
